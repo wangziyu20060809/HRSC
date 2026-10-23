@@ -1,0 +1,29 @@
+{
+  "hotel": "山海旅居 · 示范楼层",
+  "rooms": [
+    { "no": "1201", "type": "高级大床房", "floor": 12, "occupied": false, "clean": "dirty", "block": null, "note": "客人 10:12 退房" },
+    { "no": "1202", "type": "高级大床房", "floor": 12, "occupied": false, "clean": "clean", "block": null, "note": "已清扫，待查房" },
+    { "no": "1203", "type": "高级大床房", "floor": 12, "occupied": false, "clean": "inspected", "block": null, "note": "查房通过" },
+    { "no": "1205", "type": "豪华双床房", "floor": 12, "occupied": false, "clean": "clean", "block": null, "note": "查房时发现卫浴异味" },
+    { "no": "1206", "type": "豪华双床房", "floor": 12, "occupied": true, "clean": "dirty", "block": null, "note": "在住，预计明日退房" },
+    { "no": "1207", "type": "高级大床房", "floor": 12, "occupied": false, "clean": "inspected", "block": { "type": "OOS", "reason": "床头灯待更换", "until": "今日 18:00" }, "note": "可售但需提示" },
+    { "no": "1208", "type": "家庭套房", "floor": 12, "occupied": false, "clean": "dirty", "block": { "type": "OOO", "reason": "空调故障大修", "until": "10-26" }, "note": "已从库存扣减" },
+    { "no": "1209", "type": "家庭套房", "floor": 12, "occupied": false, "clean": "clean", "block": null, "note": "查房未完成，前台已收到渠道订单" }
+  ],
+  "rules": [
+    { "id": "R1", "text": "查房未通过（clean 而非 inspected）不得标记可售", "type": "确定性校验" },
+    { "id": "R2", "text": "OOO 房间不进入可售库存，任何渠道不可分配", "type": "确定性校验" },
+    { "id": "R3", "text": "OOS 房间可售但须在交接单提示原因与恢复时间", "type": "提示" },
+    { "id": "R4", "text": "解除 OOO 必须有复审证据字段，缺失即拒绝恢复", "type": "确定性校验" },
+    { "id": "R5", "text": "误判认定须由质检按签字口径判定，系统只提供证据", "type": "人工裁决" },
+    { "id": "R6", "text": "交接单字段不超过现有单据填写时长，否则高峰必被绕过", "type": "可用性约束" }
+  ],
+  "handoffFields": [
+    { "key": "room", "label": "房号", "required": true },
+    { "key": "state", "label": "当前三态", "required": true },
+    { "key": "blocker", "label": "阻塞原因", "required": false },
+    { "key": "owner", "label": "具名接收人", "required": true },
+    { "key": "nextAction", "label": "下一步动作", "required": true },
+    { "key": "eta", "label": "预计可售时间", "required": false }
+  ]
+}

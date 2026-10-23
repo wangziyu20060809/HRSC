@@ -1,3 +1,30 @@
+# 依赖与构建产物
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+
+# 运行时产生的本地状态
+*.log
+.DS_Store
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
+
+# 本地环境与密钥（本仓库不应出现密钥，防患未然）
+.env
+.env.*
+*.pem
+*.key
+
+# 临时文件
+*.tmp
+~$*
+
+# 会话与中间产物
 .workbuddy/
 output/
 .current_rid

@@ -1,0 +1,14 @@
+{
+  "name": "hrsc-hotel-room-status",
+  "version": "1.1.0",
+  "description": "HRSC · 酒店房态与入住协同：三态投影 + 确定性校验 + 人工闸门的 FDE 交付项目",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "start": "python -m http.server 8777 --directory src",
+    "test": "node tests/test_engine.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

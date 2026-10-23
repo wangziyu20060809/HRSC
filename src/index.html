@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FDE 项目工作台 · 酒店房态与入住协同</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#/overview">
+    <span class="brandmark">F</span>
+    <span><strong>FDE 项目工作台</strong><small>山海旅居 · 酒店房态与入住协同</small></span>
+  </a>
+  <nav id="nav">
+    <a href="#/overview">项目总览</a>
+    <a href="#/pipeline">九阶段流程</a>
+    <a href="#/demo">协同 Demo</a>
+    <a href="#/graphs">业务流程图</a>
+    <a href="#/roi">ROI 测算</a>
+    <a href="#/export">导出</a>
+  </nav>
+  <span class="spacer"></span>
+  <span id="save-state" class="hint">本地存储已就绪</span>
+</header>
+
+<main class="wrap" id="app"></main>
+<div id="toast" hidden></div>
+
+<script src="data/fallback.js"></script>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

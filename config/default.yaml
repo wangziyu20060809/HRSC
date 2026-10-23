@@ -1,0 +1,22 @@
+# HRSC Demo 默认参数（演示用，非生产配置）
+# 本文件只含演示数据口径，不含任何密钥或真实客户信息。
+
+demo:
+  rooms: 8            # 演示客房数，覆盖 VD/VC/VI/OD/OC/OOS/OOO 全状态
+  port: 8777          # 本地服务端口
+
+metrics:              # 与 docs/业务挖掘-发现报告.md 的指标台账一致
+  wait:    { baseline: 38, target: 15, unit: 分钟 }
+  error:   { baseline: 24, target: 5,  unit: 次/周 }
+  turn:    { baseline: 96, target: 70, unit: 分钟 }
+  audit:   { baseline: 0,  target: 100, unit: "%" }
+
+rules:                # 交接单确定性校验规则（能算出来的不交给模型）
+  R1: 可售状态必须等于三态投影结果
+  R2: 异常必须有具名接收人
+  R3: 维修房 OOO 不得出现在可售清单
+  R4: 下一步动作不超过 40 字
+  R5: 审计只记岗位与哈希，不留个人信息
+  R6: 查房影像保留 90 天，到期清理
+
+storage: localStorage # 键名 fde-travel-hotel-v1，导出页可备份/清空
