@@ -31,3 +31,8 @@ output/
 
 # 阶段1原型生成的检索索引
 src/prototype/rag_index/
+
+# 阶段2问答服务生成的索引与本地数据库
+src/hotel-assistant/rag_index/
+src/hotel-assistant/*.db
+src/hotel-assistant/*.db-*
