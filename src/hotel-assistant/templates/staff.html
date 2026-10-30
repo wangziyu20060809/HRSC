@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工单工作台 · 酒店房态管理</title>
+<link rel="stylesheet" href="/static/admin.css">
+<style>
+  /* 员工工作台复用后台 SaaS 风格 */
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tabs a{padding:8px 18px;border-radius:8px;font-size:13.5px;text-decoration:none;
+          background:#fff;border:1px solid #E3E8ED;color:#5F6B76}
+  .tabs a.on{background:#0F4C5C;color:#fff;border-color:#0F4C5C}
+  .tabs a .n{background:#B07A16;color:#fff;border-radius:10px;font-size:11px;
+             padding:1px 7px;margin-left:6px}
+  .ticket-row{cursor:pointer}
+  .ticket-row:hover td{background:#F7FAFB}
+  .note{color:#8A94A0;font-size:12.5px;max-width:360px;overflow:hidden;
+        text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidenav">
+    <div class="brand"><span class="logo">房</span> 员工工作台</div>
+    <nav>
+      <a href="/staff" class="on">人工工单</a>
+      <a href="/staff/chat">制度问答</a>
+    </nav>
+    <div class="sidenav-foot">
+      <div>{{ user.display_name }}（员工）</div>
+      <a href="javascript:logout()">退出登录</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar"><span class="crumb">人工工单 · AI 先答，未解决转人工兜底</span></header>
+    <div class="content-inner">
+      <div class="tabs">
+        {% for key, label in [('pending','待认领'),('claimed','处理中'),('resolved','已完结')] %}
+        <a href="/staff/tickets?status={{ key }}"
+           class="{{ 'on' if status==key }}">{{ label }}
+           <span class="n">{{ tickets[key]|length }}</span></a>
+        {% endfor %}
+      </div>
+
+      <div class="panel">
+        {% set list = tickets[status] %}
+        {% if list %}
+        <table>
+          <tr><th>会话主题</th><th>客人备注</th><th>处理人</th><th>最近活跃</th><th></th></tr>
+          {% for t in list %}
+          <tr class="ticket-row" onclick="location.href='/staff/tickets/{{ t.id }}'">
+            <td>{{ t.title }}</td>
+            <td class="note">{{ t.escalated_note or '—' }}</td>
+            <td>{{ t.assignee_name or '—' }}</td>
+            <td>{{ t.last_active_at }}</td>
+            <td><a class="btn sm ghost" href="/staff/tickets/{{ t.id }}">打开</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:#8A94A0;font-size:13px">当前没有「{{ {'pending':'待认领','claimed':'处理中','resolved':'已完结'}[status] }}」的工单。</p>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+async function logout() {
+  await fetch('/auth/logout', {method: 'POST'});
+  location.href = '/login';
+}
+</script>
+</body>
+</html>

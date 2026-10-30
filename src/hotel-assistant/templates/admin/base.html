@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}管理后台{% endblock %} · 酒店房态管理</title>
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<div class="admin-layout">
+  <!-- 左侧深色导航 -->
+  <aside class="sidenav">
+    <div class="brand"><span class="logo">房</span> 房态管理后台</div>
+    <nav>
+      <a href="/admin" class="{{ 'on' if active=='home' }}">首页概览</a>
+      <a href="/admin/kb" class="{{ 'on' if active=='kb' }}">制度知识库</a>
+      <a href="/admin/prompts" class="{{ 'on' if active=='prompts' }}">提示词模板</a>
+      <a href="/admin/pages" class="{{ 'on' if active=='pages' }}">页面内容</a>
+      <a href="/admin/audit" class="{{ 'on' if active=='audit' }}">对话审计</a>
+      <a href="/admin/users" class="{{ 'on' if active=='users' }}">账号管理</a>
+    </nav>
+    <div class="sidenav-foot">
+      <div>{{ user.username }}（{{ '管理员' if user.role=='admin' else '员工' }}）</div>
+      <a href="javascript:logout()">退出登录</a>
+    </div>
+  </aside>
+
+  <!-- 右侧内容区 -->
+  <main class="content">
+    <header class="topbar">
+      <span class="crumb">{% block crumb %}首页{% endblock %}</span>
+    </header>
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+/* 通用：轻提示 + 退出登录 + 简单请求封装（统一弹中文错误） */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none', 2200);
+}
+async function logout() {
+  await fetch('/auth/logout', {method: 'POST'});
+  location.href = '/login';
+}
+async function api(url, opts = {}) {
+  const resp = await fetch(url, opts);
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok && data.message) alert(data.message);
+  return data;
+}
+</script>
+{% block script %}{% endblock %}
+</body>
+</html>

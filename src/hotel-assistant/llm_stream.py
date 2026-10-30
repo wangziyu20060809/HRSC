@@ -97,10 +97,14 @@ def chunk_text(text: str, size: int = 8) -> Generator[str, None, None]:
         yield text[i : i + size]
 
 
-def build_messages(question: str, hits: list[dict], history: list[dict]) -> list[dict]:
+def build_messages(question: str, hits: list[dict], history: list[dict],
+                   system_prompt: str | None = None) -> list[dict]:
     """
     组装发给 LLM 的完整消息列表：
       system（护栏） + 历史（最近 6 轮） + 当前问题（含检索条款上下文）
+
+    system_prompt 传 None 时使用模块内默认模板；
+    管理后台保存的模板由调用方（app 层）从 DB 读出后传入——保存即生效。
     历史消息只取 user/assistant 两种角色，tool 消息不进上下文。
     """
     context = "\n\n".join(
@@ -111,7 +115,7 @@ def build_messages(question: str, hits: list[dict], history: list[dict]) -> list
         f"=== 员工问题 ===\n{question}\n\n"
         f"请只依据上述条款回答，并注明条款号。"
     )
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": system_prompt or SYSTEM_PROMPT}]
     for m in history:
         if m["role"] in ("user", "assistant"):
             messages.append({"role": m["role"], "content": m["content"]})

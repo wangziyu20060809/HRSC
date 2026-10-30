@@ -1,0 +1,73 @@
+{% extends "admin/base.html" %}
+{% block title %}制度知识库{% endblock %}
+{% block crumb %}制度知识库{% endblock %}
+{% block content %}
+<div class="content-inner">
+  <div class="panel">
+    <h3>上传制度文档（支持 .md / .txt / .pdf，自动切块 + 向量化）</h3>
+    <form id="upForm" enctype="multipart/form-data">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px"><label>文档标题</label>
+          <input type="text" name="title" required maxlength="200" placeholder="例如：客房管理制度"></div>
+        <div style="width:140px"><label>版本号</label>
+          <input type="text" name="version" required maxlength="32" placeholder="例如：v1.2"></div>
+        <div style="flex:1;min-width:220px"><label>选择文件</label>
+          <input type="file" name="file" accept=".md,.txt,.pdf" required></div>
+      </div>
+      <button class="btn" style="margin-top:14px" type="submit">上传并入库</button>
+      <button class="btn ghost" style="margin-top:14px" type="button" onclick="reindex()">重建全部索引</button>
+      <div class="hint">同名同版本内容重复上传会按文件哈希去重；删除文档后自动用剩余文档重建索引。</div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>已入库文档（{{ docs|length }}）</h3>
+    {% if docs %}
+    <table>
+      <tr><th>标题</th><th>版本</th><th>分块数</th><th>上传人</th><th>上传时间</th><th></th></tr>
+      {% for d in docs %}
+      <tr>
+        <td>{{ d.title }}</td>
+        <td>{{ d.version }}</td>
+        <td>{{ d.chunk_count }}</td>
+        <td>{{ d.uploaded_by or '—' }}</td>
+        <td>{{ d.created_at }}</td>
+        <td><button class="btn sm danger" onclick="delDoc('{{ d.id }}', '{{ d.title }}')">删除</button></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p style="color:#8A94A0;font-size:13px">知识库为空，请先上传制度文档。</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+/* 上传：FormData 直接提交，后端返回中文 message */
+document.getElementById('upForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  if (!fd.get('file') || !fd.get('file').name) { alert('请选择文件'); return; }
+  const resp = await fetch('/admin/api/kb/docs', {method: 'POST', body: fd});
+  const data = await resp.json();
+  if (!resp.ok) { alert(data.message || '上传失败'); return; }
+  toast(data.message);           // “入库成功，共 N 个分块”
+  setTimeout(() => location.reload(), 800);
+});
+async function delDoc(id, title) {
+  if (!confirm(`确认删除《${title}》？删除后立即从检索结果中移除。`)) return;
+  const resp = await fetch(`/admin/api/kb/docs/${id}`, {method: 'DELETE'});
+  const data = await resp.json();
+  if (!resp.ok) { alert(data.message || '删除失败'); return; }
+  toast(data.message);
+  setTimeout(() => location.reload(), 800);
+}
+async function reindex() {
+  const resp = await fetch('/admin/api/kb/reindex', {method: 'POST'});
+  const data = await resp.json();
+  toast(resp.ok ? data.message : (data.message || '重建失败'));
+}
+</script>
+{% endblock %}

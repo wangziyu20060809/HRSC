@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工单详情 · 酒店房态管理</title>
+<link rel="stylesheet" href="/static/admin.css">
+<style>
+  /* 工单详情：对话记录 + 认领 / 回复 / 完结 */
+  .conv{max-width:720px}
+  .msg{margin-bottom:14px;font-size:13.5px;line-height:1.8}
+  .msg .meta{font-size:11.5px;color:#8A94A0;margin-bottom:3px}
+  .msg .body{border-radius:10px;padding:9px 13px;white-space:pre-wrap}
+  .msg.guest .body{background:#F4F6F8}
+  .msg.ai .body{background:#EAF2FB}
+  .msg.staff .body{background:#FBF3E2;border:1px solid #EBD9AE}
+  .flag{color:#B23A2E;font-size:12px;margin-top:4px}
+  .actions{display:flex;gap:10px;margin:14px 0}
+  .reply textarea{min-height:90px}
+</style>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidenav">
+    <div class="brand"><span class="logo">房</span> 员工工作台</div>
+    <nav>
+      <a href="/staff" class="on">人工工单</a>
+      <a href="/staff/chat">制度问答</a>
+    </nav>
+    <div class="sidenav-foot">
+      <div>{{ user.display_name }}（员工）</div>
+      <a href="javascript:logout()">退出登录</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <span class="crumb"><a href="/staff" style="color:#5F6B76;text-decoration:none">← 返回工单列表</a>
+        · 工单：{{ session.title }}</span>
+    </header>
+    <div class="content-inner">
+      <div class="panel">
+        <table>
+          <tr>
+            <th>状态</th>
+            <th>客人备注</th>
+            <th>处理人</th>
+            <th>发起时间</th>
+          </tr>
+          <tr>
+            <td>
+              {% if session.resolved_at %}<span class="tag ok">已完结</span>
+              {% elif session.assignee_name %}<span class="tag info">处理中 · {{ session.assignee_name }}</span>
+              {% else %}<span class="tag warn">待认领</span>{% endif %}
+            </td>
+            <td>{{ session.escalated_note or '—' }}</td>
+            <td>{{ session.assignee_name or '—' }}</td>
+            <td>{{ session.created_at }}</td>
+          </tr>
+        </table>
+
+        <!-- 操作区：待认领显示认领；未完结显示回复框；认领人可见完结 -->
+        <div class="actions">
+          {% if not session.assignee_name and not session.resolved_at %}
+          <button class="btn" onclick="claim()">认领工单</button>
+          {% endif %}
+          {% if not session.resolved_at %}
+          <button class="btn ghost" onclick="location.reload()">刷新对话</button>
+          {% endif %}
+        </div>
+
+        {% if session.assignee_name and not session.resolved_at
+           and session.assignee_id == user.sub %}
+        <div class="reply">
+          <label>回复客人（会实时推送到客人端）</label>
+          <textarea id="reply" maxlength="1000" placeholder="请输入回复内容，例如：已为您安排 1208 房清扫，预计 30 分钟内完成…"></textarea>
+          <div style="margin-top:10px;display:flex;gap:10px">
+            <button class="btn" onclick="reply()">发送回复</button>
+            <button class="btn danger" onclick="resolve()">完结工单</button>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- 对话记录：客人提问 + AI 回答 + 员工回复，违规标记可见 -->
+      <div class="panel conv">
+        <h3>对话记录</h3>
+        {% for m in messages %}
+        <div class="msg {{ m.actor }}">
+          <div class="meta">
+            {{ {'guest':'客人','ai':'智能助手','staff':'员工'}[m.actor] }} · {{ m.created_at }}
+          </div>
+          <div class="body">{{ m.content }}</div>
+          {% if m.flagged %}<div class="flag">⚠ 违规标记：{{ m.flag_reason or '待管理员复核' }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const SID = '{{ session.id }}';
+async function post(url, body) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body || {}),
+  });
+  const data = await resp.json();
+  if (!resp.ok) { alert(data.message || '操作失败'); return null; }
+  return data;
+}
+async function claim()   { if (await post(`/staff/tickets/${SID}/claim`)) location.reload(); }
+async function reply() {
+  const content = document.getElementById('reply').value.trim();
+  if (!content) { alert('回复内容不能为空'); return; }
+  if (await post(`/staff/tickets/${SID}/reply`, {content})) location.reload();
+}
+async function resolve() {
+  if (!confirm('确认完结该工单？')) return;
+  if (await post(`/staff/tickets/${SID}/resolve`)) location.reload();
+}
+async function logout() {
+  await fetch('/auth/logout', {method: 'POST'});
+  location.href = '/login';
+}
+</script>
+</body>
+</html>

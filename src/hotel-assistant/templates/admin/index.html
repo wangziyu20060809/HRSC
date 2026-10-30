@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% block title %}首页概览{% endblock %}
+{% block crumb %}首页概览{% endblock %}
+{% block content %}
+<div class="content-inner">
+  <!-- 统计卡：知识库规模 + 进行中工单 + 消息量 + 违规数 -->
+  <div class="cards">
+    <div class="card"><div class="k">制度文档</div><div class="v">{{ stats.docs }}</div></div>
+    <div class="card"><div class="k">进行中工单</div><div class="v">{{ stats.sessions }}</div></div>
+    <div class="card"><div class="k">消息总量（近 500 条）</div><div class="v">{{ stats.messages }}</div></div>
+    <div class="card"><div class="k">违规标记</div><div class="v" style="color:{% if stats.flags %}var(--danger){% endif %}">{{ stats.flags }}</div></div>
+  </div>
+
+  <div class="panel">
+    <h3>快速入口</h3>
+    <table>
+      <tr><th>任务</th><th>说明</th><th></th></tr>
+      <tr><td>制度知识库</td><td>上传 / 删除制度文档，自动切块入库并重建向量索引</td>
+          <td><a class="btn sm ghost" href="/admin/kb">进入</a></td></tr>
+      <tr><td>提示词模板</td><td>修改 AI 回答口径，保存后对下一条提问立即生效</td>
+          <td><a class="btn sm ghost" href="/admin/prompts">进入</a></td></tr>
+      <tr><td>页面内容</td><td>维护客人端欢迎语与常见问题（FAQ）</td>
+          <td><a class="btn sm ghost" href="/admin/pages">进入</a></td></tr>
+      <tr><td>对话审计</td><td>按渠道 / 时间 / 违规标记筛选全部消息，人工复核</td>
+          <td><a class="btn sm ghost" href="/admin/audit">进入</a></td></tr>
+      <tr><td>账号管理</td><td>创建员工 / 管理员账号，重置密码，停用</td>
+          <td><a class="btn sm ghost" href="/admin/users">进入</a></td></tr>
+    </table>
+  </div>
+</div>
+{% endblock %}

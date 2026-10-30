@@ -1,0 +1,58 @@
+{% extends "admin/base.html" %}
+{% block title %}页面内容{% endblock %}
+{% block crumb %}页面内容 · 客人端{% endblock %}
+{% block content %}
+<div class="content-inner">
+  <div class="panel">
+    <h3>欢迎语（客人端首页顶部展示）</h3>
+    <textarea id="welcome" maxlength="500">{{ page.welcome }}</textarea>
+  </div>
+
+  <div class="panel">
+    <h3>常见问题（FAQ） <button class="btn sm ghost" onclick="addFaq()">+ 添加一条</button></h3>
+    <div id="faqBox">
+      {% for item in page.faq %}
+      <div class="faq-item" style="border:1px solid #E3E8ED;border-radius:8px;padding:12px;margin-bottom:10px">
+        <label>问题</label>
+        <input type="text" class="faq-q" value="{{ item.q }}">
+        <label>答案</label>
+        <textarea class="faq-a" style="min-height:70px">{{ item.a }}</textarea>
+        <button class="btn sm danger" style="margin-top:8px" onclick="this.parentElement.remove()">删除</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <button class="btn" onclick="save()">保存全部</button>
+  <span class="hint" style="margin-left:10px">保存后客人端刷新页面即生效。</span>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+function addFaq() {
+  const div = document.createElement('div');
+  div.className = 'faq-item';
+  div.style.cssText = 'border:1px solid #E3E8ED;border-radius:8px;padding:12px;margin-bottom:10px';
+  div.innerHTML = '<label>问题</label><input type="text" class="faq-q">'
+    + '<label>答案</label><textarea class="faq-a" style="min-height:70px"></textarea>'
+    + '<button class="btn sm danger" style="margin-top:8px" onclick="this.parentElement.remove()">删除</button>';
+  document.getElementById('faqBox').appendChild(div);
+}
+async function save() {
+  const welcome = document.getElementById('welcome').value.trim();
+  if (!welcome) { alert('欢迎语不能为空'); return; }
+  // 收集 FAQ：跳过问题为空的条目
+  const faq = [...document.querySelectorAll('#faqBox .faq-item')]
+    .map(el => ({q: el.querySelector('.faq-q').value.trim(),
+                 a: el.querySelector('.faq-a').value.trim()}))
+    .filter(x => x.q);
+  const resp = await fetch('/admin/api/pages/home', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({welcome, faq}),
+  });
+  const data = await resp.json();
+  toast(resp.ok ? data.message : (data.message || '保存失败'));
+}
+</script>
+{% endblock %}

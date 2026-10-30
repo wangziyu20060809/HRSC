@@ -1,0 +1,92 @@
+{% extends "admin/base.html" %}
+{% block title %}对话审计{% endblock %}
+{% block crumb %}对话审计{% endblock %}
+{% block content %}
+<div class="content-inner">
+  <!-- 筛选栏：渠道 / 时间范围 / 违规标记，全部走 audit_messages 查询 -->
+  <div class="panel">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div style="width:150px"><label>渠道</label>
+        <select id="fChannel">
+          <option value="">全部</option>
+          <option value="guest">客人端</option>
+          <option value="staff">员工端</option>
+        </select></div>
+      <div style="width:160px"><label>开始日期</label><input type="date" id="fStart"></div>
+      <div style="width:160px"><label>结束日期</label><input type="date" id="fEnd"></div>
+      <div style="width:150px"><label>违规标记</label>
+        <select id="fFlag">
+          <option value="">全部</option>
+          <option value="1">仅看已标记</option>
+          <option value="0">仅看未标记</option>
+        </select></div>
+      <button class="btn" onclick="load()">查询</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>消息列表（按时间倒序，最多 200 条）</h3>
+    <div id="list"><p style="color:#8A94A0;font-size:13px">点击「查询」加载。</p></div>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const ACTOR = {guest:'客人', ai:'智能助手', staff:'员工'};
+const ROLE  = {user:'提问', assistant:'回答'};
+
+async function load() {
+  const p = new URLSearchParams();
+  if (document.getElementById('fChannel').value) p.set('channel', document.getElementById('fChannel').value);
+  if (document.getElementById('fStart').value)   p.set('start',   document.getElementById('fStart').value);
+  if (document.getElementById('fEnd').value)     p.set('end',     document.getElementById('fEnd').value);
+  if (document.getElementById('fFlag').value)    p.set('flagged', document.getElementById('fFlag').value);
+  const resp = await fetch('/admin/api/audit/messages?' + p.toString());
+  const data = await resp.json();
+  if (!resp.ok) { alert(data.message || '查询失败'); return; }
+
+  const box = document.getElementById('list');
+  if (!data.messages.length) {
+    box.innerHTML = '<p style="color:#8A94A0;font-size:13px">没有符合条件的消息。</p>';
+    return;
+  }
+  // 违规标记列：可人工改判（标记 / 取消标记 + 理由）
+  box.innerHTML = `<table><tr><th>时间</th><th>渠道</th><th>会话</th><th>发言人</th>
+    <th style="width:40%">内容</th><th>标记</th><th>操作</th></tr>` +
+    data.messages.map(m => `
+      <tr>
+        <td style="white-space:nowrap">${m.created_at}</td>
+        <td>${m.channel === 'guest' ? '客人端' : '员工端'}</td>
+        <td class="note" title="${m.session_title || ''}">${m.session_title || '—'}</td>
+        <td>${ACTOR[m.actor] || m.actor}·${ROLE[m.role] || m.role}</td>
+        <td>${(m.content || '').slice(0, 120)}${(m.content || '').length > 120 ? '…' : ''}</td>
+        <td>${m.flagged
+              ? `<span class="tag danger">违规</span><div class="hint">${m.flag_reason || ''}</div>`
+              : '<span class="tag ok">正常</span>'}</td>
+        <td style="white-space:nowrap">
+          ${m.flagged
+            ? `<button class="btn sm ghost" onclick="flag('${m.id}', false)">取消标记</button>`
+            : `<button class="btn sm danger" onclick="flag('${m.id}', true)">标记违规</button>`}
+        </td>
+      </tr>`).join('') + '</table>';
+}
+
+/* 人工改判：标记 / 取消都会覆盖规则结果并记录理由 */
+async function flag(mid, on) {
+  let reason = '';
+  if (on) {
+    reason = prompt('请输入违规理由（将随标记保存）：') ?? '';
+    if (!reason.trim()) return;
+  } else if (!confirm('确认取消该违规标记？')) return;
+  const resp = await fetch(`/admin/api/audit/messages/${mid}/flag`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({flagged: on, reason: reason.trim()}),
+  });
+  const data = await resp.json();
+  toast(resp.ok ? data.message : (data.message || '操作失败'));
+  if (resp.ok) load();
+}
+load();   // 进入页面默认加载全部
+</script>
+{% endblock %}

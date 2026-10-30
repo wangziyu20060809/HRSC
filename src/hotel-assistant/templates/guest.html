@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>智能服务 · 山海旅居</title>
+<style>
+  /* 客人端：免登录问答 + 转人工；欢迎语与 FAQ 由管理员在后台维护 */
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:#F4F6F8;color:#1F2937}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+  .hero{background:linear-gradient(135deg,#123B47,#0F4C5C);color:#fff;border-radius:14px;
+        padding:24px 22px;margin-bottom:16px}
+  .hero h1{font-size:18px;margin:0 0 8px}
+  .hero p{font-size:13.5px;line-height:1.8;margin:0;color:#D8E6EA}
+  .faq{background:#fff;border:1px solid #E3E8ED;border-radius:14px;padding:16px 18px;margin-bottom:16px}
+  .faq h2{font-size:14px;margin:0 0 10px;color:#5F6B76}
+  .faq-item{border-top:1px solid #F0F3F5;padding:10px 0;font-size:13.5px}
+  .faq-item:first-of-type{border-top:none}
+  .faq-item b{display:block;margin-bottom:4px;cursor:pointer;color:#0F4C5C}
+  .faq-item p{margin:0;color:#5F6B76;line-height:1.7;display:none}
+  .faq-item.open p{display:block}
+  .chat{background:#fff;border:1px solid #E3E8ED;border-radius:14px;display:flex;
+        flex-direction:column;height:520px}
+  .msgs{flex:1;overflow-y:auto;padding:16px}
+  .msg{max-width:82%;margin-bottom:14px;font-size:14px;line-height:1.8}
+  .msg.user{margin-left:auto;background:#0F4C5C;color:#fff;border-radius:12px 12px 2px 12px;
+            padding:10px 14px}
+  .msg.ai{background:#F4F6F8;border-radius:12px 12px 12px 2px;padding:10px 14px}
+  .msg.staff{background:#FBF3E2;border:1px solid #EBD9AE;border-radius:12px 12px 12px 2px;
+             padding:10px 14px}
+  .msg .who{font-size:11.5px;color:#8A94A0;margin-bottom:4px}
+  .status{font-size:12.5px;color:#8A94A0;padding:0 16px 6px}
+  .cites{margin-top:8px}
+  .cite{border:1px solid #E3E8ED;border-left:3px solid #B07A16;border-radius:8px;
+        background:#fff;padding:8px 10px;margin-top:6px;font-size:12px;color:#5F6B76}
+  .cite b{color:#1F2937;display:block;margin-bottom:2px}
+  .composer{border-top:1px solid #E3E8ED;padding:12px;display:flex;gap:10px}
+  .composer textarea{flex:1;border:1px solid #E3E8ED;border-radius:10px;padding:10px 12px;
+                     font-size:14px;font-family:inherit;resize:none;height:46px;outline:none}
+  .composer button{border:none;border-radius:10px;background:#0F4C5C;color:#fff;
+                   font-size:14px;padding:0 22px;cursor:pointer}
+  .composer button:disabled{background:#9FB3B9;cursor:not-allowed}
+  .tools{display:flex;justify-content:space-between;align-items:center;
+         padding:0 12px 12px;font-size:12.5px}
+  .tools a{color:#B07A16;cursor:pointer;text-decoration:none}
+  .handoff{color:#2F7A4F}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- 欢迎语：管理员可在后台「页面内容」中修改 -->
+  <div class="hero">
+    <h1>山海旅居 · 智能服务</h1>
+    <p>{{ page.welcome }}</p>
+  </div>
+
+  <!-- 常见问题：点击问题展开答案，点击问题文本直接发问 -->
+  <div class="faq">
+    <h2>常见问题</h2>
+    {% for item in page.faq %}
+    <div class="faq-item" data-q="{{ item.q }}">
+      <b onclick="askFaq(this)">问：{{ item.q }}</b>
+      <p>答：{{ item.a }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- 对话区 -->
+  <div class="chat">
+    <div class="msgs" id="msgs"></div>
+    <div class="status" id="status"></div>
+    <div class="composer">
+      <textarea id="q" placeholder="请输入您的问题，例如：退房后多久可以再次入住？" maxlength="500"></textarea>
+      <button id="send" onclick="send()">发送</button>
+    </div>
+    <div class="tools">
+      <a onclick="escalate()">转人工（值班员工为您服务）</a>
+      <span id="handoffState" class="handoff"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+ * 客人端逻辑：
+ *  1) 免登录：首次进入创建会话，会话 ID 存 localStorage，刷新不丢
+ *  2) 提问 → SSE 流式回答（检索状态 → 引用卡片 → 打字机 → 完成）
+ *  3) 转人工后：轮询拉取员工回复，直到工单完结
+ * ================================================================ */
+let sid = localStorage.getItem('guest_sid') || '';
+let polling = null;              // 转人工后的轮询定时器
+
+/* —— 会话初始化 —— */
+async function ensureSession() {
+  if (sid) return;
+  const resp = await fetch('/guest/sessions', {method: 'POST'});
+  const data = await resp.json();
+  sid = data.guest_session_id;
+  localStorage.setItem('guest_sid', sid);
+}
+
+/* —— SSE 解析：按 event:/data: 行切分 —— */
+async function readSSE(resp, handlers) {
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '', event = '', data = '';
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, {stream: true});
+    let idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) {   // 一个完整 SSE 帧以空行结束
+      const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
+      event = ''; data = '';
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (event && handlers[event]) {
+        try { handlers[event](JSON.parse(data)); } catch { /* 忽略坏帧 */ }
+      }
+    }
+  }
+}
+
+/* —— 消息渲染 —— */
+const msgs = document.getElementById('msgs');
+function bubble(role, text, who) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if (who) div.innerHTML = `<div class="who"></div><div class="body"></div>`;
+  (who ? div.querySelector('.who') : div).textContent = who || '';
+  (who ? div.querySelector('.body') : div).textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+function aiBubble() {   // AI 回答容器：先放引用，正文打字机追加
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = '<div class="who">智能助手</div><div class="body"></div><div class="cites"></div>';
+  msgs.appendChild(div);
+  return div;
+}
+
+/* —— 发送问题 —— */
+async function send() {
+  const input = document.getElementById('q');
+  const question = input.value.trim();
+  if (!question) return;
+  await ensureSession();
+  input.value = '';
+  document.getElementById('send').disabled = true;
+  bubble('user', question);
+  document.getElementById('status').textContent = '';
+
+  const resp = await fetch('/guest/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_id: sid, question}),
+  });
+  if (!resp.ok) {                       // 非流式错误（统一错误信封）
+    const data = await resp.json().catch(() => ({}));
+    document.getElementById('status').textContent = data.message || '服务异常，请稍后重试';
+    document.getElementById('send').disabled = false;
+    return;
+  }
+  const ai = aiBubble();
+  const body = ai.querySelector('.body');
+  const cites = ai.querySelector('.cites');
+  await readSSE(resp, {
+    status(d)  { document.getElementById('status').textContent = d.text || ''; },
+    citations(list) {
+      cites.innerHTML = list.map(c =>
+        `<div class="cite"><b>引用：${c.doc_title} · ${c.version} · ${c.clause_no}</b>${c.snippet}…</div>`
+      ).join('');
+    },
+    token(d)   { body.textContent += d.text; msgs.scrollTop = msgs.scrollHeight; },
+    error(d)   { document.getElementById('status').textContent = d.message; },
+    done()     { document.getElementById('status').textContent = ''; },
+  });
+  document.getElementById('send').disabled = false;
+}
+
+/* FAQ 点击问题直接发问 */
+function askFaq(el) {
+  const q = el.parentElement.dataset.q;
+  document.getElementById('q').value = q;
+  send();
+}
+
+/* —— 转人工：提交备注后轮询员工回复 —— */
+async function escalate() {
+  await ensureSession();
+  const note = prompt('请简要说明您遇到的问题（可不填）：') ?? '';
+  const resp = await fetch(`/guest/sessions/${sid}/escalate`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({note}),
+  });
+  const data = await resp.json();
+  document.getElementById('handoffState').textContent = data.message || '';
+  if (resp.ok && !polling) startPolling();
+}
+
+/* 轮询：拉全量消息，把员工新回复渲染出来（3 秒一次） */
+let seenStaff = 0;
+async function poll() {
+  const resp = await fetch(`/guest/sessions/${sid}/messages`);
+  if (!resp.ok) return;
+  const data = await resp.json();
+  const staffMsgs = data.messages.filter(m => m.actor === 'staff');
+  for (const m of staffMsgs.slice(seenStaff)) {
+    bubble('staff', m.content, `员工 ${data.assignee_name || ''} 回复`);
+  }
+  seenStaff = staffMsgs.length;
+  if (data.resolved) {
+    document.getElementById('handoffState').textContent = '该工单已完结，感谢反馈';
+    clearInterval(polling); polling = null;
+  }
+}
+function startPolling() { poll(); polling = setInterval(poll, 3000); }
+
+/* 若本地已有转人工会话，刷新页面后恢复轮询 */
+(async () => {
+  await ensureSession();
+  const resp = await fetch(`/guest/sessions/${sid}/messages`);
+  if (resp.ok) {
+    const data = await resp.json();
+    if (data.assignee_name) startPolling();
+  }
+})();
+
+/* 回车发送 */
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+</script>
+</body>
+</html>

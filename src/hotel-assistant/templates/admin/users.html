@@ -1,0 +1,81 @@
+{% extends "admin/base.html" %}
+{% block title %}账号管理{% endblock %}
+{% block crumb %}账号管理{% endblock %}
+{% block content %}
+<div class="content-inner">
+  <div class="panel">
+    <h3>新建账号</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div style="width:150px"><label>用户名</label><input type="text" id="cName" maxlength="64" placeholder="登录用"></div>
+      <div style="width:150px"><label>姓名</label><input type="text" id="cDisp" maxlength="64" placeholder="显示名"></div>
+      <div style="width:140px"><label>岗位</label><input type="text" id="cPost" maxlength="64" placeholder="例如：前台主管"></div>
+      <div style="width:130px"><label>角色</label>
+        <select id="cRole"><option value="staff">员工</option><option value="admin">管理员</option></select></div>
+      <div style="width:170px"><label>初始密码（≥6 位）</label><input type="password" id="cPwd" maxlength="64"></div>
+      <button class="btn" onclick="create()">创建</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>账号列表（{{ users|length }}）</h3>
+    <table>
+      <tr><th>用户名</th><th>姓名</th><th>岗位</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.username }}</td>
+        <td>{{ u.display_name }}</td>
+        <td>{{ u.post or '—' }}</td>
+        <td>{{ '管理员' if u.role == 'admin' else '员工' }}</td>
+        <td>{% if u.is_active %}<span class="tag ok">启用</span>{% else %}<span class="tag danger">已停用</span>{% endif %}</td>
+        <td>{{ u.created_at }}</td>
+        <td style="white-space:nowrap">
+          <button class="btn sm ghost" onclick="resetPwd('{{ u.id }}', '{{ u.username }}')">重置密码</button>
+          {% if u.id != user.sub %}
+          <button class="btn sm {{ 'danger' if u.is_active else '' }}"
+                  onclick="toggle('{{ u.id }}', {{ 'false' if u.is_active else 'true' }})">
+            {{ '停用' if u.is_active else '启用' }}</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+async function post(url, body) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json();
+  if (!resp.ok) { alert(data.message || '操作失败'); return null; }
+  return data;
+}
+async function create() {
+  const body = {
+    username: document.getElementById('cName').value.trim(),
+    display_name: document.getElementById('cDisp').value.trim(),
+    post: document.getElementById('cPost').value.trim(),
+    role: document.getElementById('cRole').value,
+    password: document.getElementById('cPwd').value,
+  };
+  if (!body.username || !body.display_name) { alert('用户名和姓名不能为空'); return; }
+  const data = await post('/admin/api/users', body);
+  if (data) { toast(data.message); setTimeout(() => location.reload(), 700); }
+}
+async function resetPwd(uid, name) {
+  const pwd = prompt(`为 ${name} 设置新密码（至少 6 位）：`);
+  if (!pwd || pwd.length < 6) { if (pwd !== null) alert('密码至少 6 位'); return; }
+  const data = await post(`/admin/api/users/${uid}/reset-password`, {password: pwd});
+  if (data) toast(data.message);
+}
+async function toggle(uid, on) {
+  if (!confirm(on ? '确认启用该账号？' : '确认停用该账号？停用后立即无法登录。')) return;
+  const data = await post(`/admin/api/users/${uid}/toggle`, {is_active: on});
+  if (data) { toast(data.message); setTimeout(() => location.reload(), 700); }
+}
+</script>
+{% endblock %}

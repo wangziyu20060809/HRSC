@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · 酒店房态管理</title>
+<style>
+  /* 登录页：独立居中卡片，不依赖后台布局 */
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;
+       background:linear-gradient(135deg,#123B47 0%,#0F4C5C 100%);min-height:100vh;
+       display:flex;align-items:center;justify-content:center}
+  .box{background:#fff;border-radius:14px;padding:36px 34px;width:360px;
+       box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .brand{text-align:center;margin-bottom:24px}
+  .brand .logo{width:44px;height:44px;border-radius:10px;background:#0F4C5C;color:#fff;
+       display:inline-flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px}
+  .brand h1{font-size:17px;margin:6px 0 2px;color:#1F2937}
+  .brand p{font-size:12px;color:#8A94A0;margin:0}
+  label{display:block;font-size:13px;color:#5F6B76;margin:14px 0 6px}
+  input{width:100%;border:1px solid #E3E8ED;border-radius:8px;padding:10px 12px;
+        font-size:14px;outline:none}
+  input:focus{border-color:#0F4C5C}
+  button{width:100%;margin-top:20px;border:none;border-radius:8px;background:#0F4C5C;
+         color:#fff;font-size:14.5px;padding:11px;cursor:pointer}
+  button:hover{filter:brightness(1.08)}
+  .err{display:none;background:#FBEDEB;color:#B23A2E;border-radius:8px;
+       font-size:13px;padding:9px 12px;margin-top:14px}
+  .demo{margin-top:18px;font-size:12px;color:#8A94A0;line-height:1.9;
+        background:#F4F6F8;border-radius:8px;padding:10px 12px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="brand">
+    <div class="logo">房</div>
+    <h1>酒店房态管理</h1>
+    <p>员工工作台 · 管理后台</p>
+  </div>
+  <form id="f">
+    <label>用户名</label>
+    <input id="username" autocomplete="username" required>
+    <label>密码</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button type="submit" id="btn">登 录</button>
+    <div class="err" id="err"></div>
+  </form>
+  <div class="demo">
+    演示账号（首次启动自动创建）：<br>
+    管理员 admin / Admin@123　·　员工 staff / Staff@123
+  </div>
+</div>
+<script>
+/* 登录：成功按角色跳转（admin→后台，staff→工单工作台） */
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  document.getElementById('btn').disabled = true;
+  try {
+    const resp = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value,
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {                      // 统一错误信封：弹出中文 message
+      err.textContent = data.message || '登录失败，请稍后重试';
+      err.style.display = 'block';
+      return;
+    }
+    location.href = data.role === 'admin' ? '/admin' : '/staff';
+  } catch {
+    err.textContent = '网络异常，请检查服务是否启动';
+    err.style.display = 'block';
+  } finally {
+    document.getElementById('btn').disabled = false;
+  }
+});
+</script>
+</body>
+</html>
