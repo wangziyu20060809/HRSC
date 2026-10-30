@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>智能服务 · 山海旅居</title>
 <style>
-  /* 客人端：免登录问答 + 转人工后同一对话框内与员工对话，全量记录持久保存 */
+  /* 客人端：房号轻量登录 + 免密问答 + 转人工后同一对话框内与员工对话 */
   *{box-sizing:border-box}
   body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:#F4F6F8;color:#1F2937}
   .wrap{max-width:760px;margin:0 auto;padding:20px 16px 40px}
@@ -13,6 +13,10 @@
         padding:24px 22px;margin-bottom:16px}
   .hero h1{font-size:18px;margin:0 0 8px}
   .hero p{font-size:13.5px;line-height:1.8;margin:0;color:#D8E6EA}
+  .room-badge{display:inline-block;margin-top:10px;background:rgba(255,255,255,.14);
+              border:1px solid rgba(255,255,255,.35);border-radius:20px;padding:4px 14px;
+              font-size:12.5px}
+  .room-badge a{color:#F5D9A8;margin-left:10px;cursor:pointer;text-decoration:none}
   .faq{background:#fff;border:1px solid #E3E8ED;border-radius:14px;padding:16px 18px;margin-bottom:16px}
   .faq h2{font-size:14px;margin:0 0 10px;color:#5F6B76}
   .faq-item{border-top:1px solid #F0F3F5;padding:10px 0;font-size:13.5px}
@@ -47,14 +51,43 @@
          padding:0 12px 12px;font-size:12.5px}
   .tools a{color:#B07A16;cursor:pointer;text-decoration:none}
   .handoff{color:#2F7A4F}
+
+  /* 房号登录门：未录入房号前遮挡全部内容 */
+  .gate-mask{position:fixed;inset:0;background:rgba(18,44,52,.55);z-index:50;
+             display:flex;align-items:center;justify-content:center;padding:16px}
+  .gate{background:#fff;border-radius:16px;padding:30px 26px;max-width:380px;width:100%;
+        box-shadow:0 18px 50px rgba(0,0,0,.25)}
+  .gate h2{margin:0 0 6px;font-size:17px;color:#123B47}
+  .gate p{margin:0 0 18px;font-size:13px;color:#5F6B76;line-height:1.7}
+  .gate input{width:100%;border:1.5px solid #D5DDE3;border-radius:10px;padding:12px 14px;
+              font-size:16px;letter-spacing:2px;text-align:center;outline:none;
+              font-family:inherit;margin-bottom:12px}
+  .gate input:focus{border-color:#0F4C5C}
+  .gate button{width:100%;border:none;border-radius:10px;background:#0F4C5C;color:#fff;
+               font-size:15px;padding:12px;cursor:pointer}
+  .gate button:disabled{background:#9FB3B9}
+  .gate .err{color:#C0392B;font-size:12.5px;min-height:18px;margin:0 0 8px;text-align:center}
+  .hidden{display:none !important}
 </style>
 </head>
 <body>
+<!-- 房号登录门：客人录入房号后方可使用（房号会随会话展示给员工与管理员） -->
+<div class="gate-mask" id="gateMask">
+  <div class="gate">
+    <h2>请输入您的房号</h2>
+    <p>房号仅用于让值班员工识别您所在的房间，以便提供上门服务，无需其他注册信息。</p>
+    <input id="roomInput" maxlength="10" placeholder="例如 1208" autocomplete="off">
+    <p class="err" id="gateErr"></p>
+    <button id="gateBtn" onclick="enterByRoom()">进入智能服务</button>
+  </div>
+</div>
+
 <div class="wrap">
-  <!-- 欢迎语：管理员可在后台「页面内容」中修改 -->
+  <!-- 欢迎语：管理员可在后台「页面内容」中修改；房号徽标显示当前登录房间 -->
   <div class="hero">
     <h1>山海旅居 · 智能服务</h1>
     <p>{{ page.welcome }}</p>
+    <span class="room-badge hidden" id="roomBadge"></span>
   </div>
 
   <!-- 常见问题：点击问题直接发问 -->
@@ -73,8 +106,8 @@
     <div class="msgs" id="msgs"></div>
     <div class="status" id="status"></div>
     <div class="composer">
-      <textarea id="q" placeholder="请输入您的问题，例如：退房后多久可以再次入住？" maxlength="500"></textarea>
-      <button id="send" onclick="send()">发送</button>
+      <textarea id="q" placeholder="请输入您的问题，例如：退房后多久可以再次入住？" maxlength="500" disabled></textarea>
+      <button id="send" onclick="send()" disabled>发送</button>
     </div>
     <div class="tools">
       <a id="escalateLink" onclick="escalate()">转人工（值班员工为您服务）</a>
@@ -86,12 +119,13 @@
 <script>
 /* ================================================================
  * 客人端逻辑：
- *  1) 免登录：会话 ID 存 localStorage；?sid= 可指定会话（演示/调试）
- *  2) 未转人工：提问 → AI 流式回答（检索→引用→打字机）
- *  3) 已转人工：发送 → 直发员工（同一工单线程，AI 不再介入）
- *  4) 轮询：拉取员工回复与工单状态；刷新页面恢复完整历史
+ *  0) 房号轻量登录：录入房号 → 创建带房号的会话；?sid= 可跳过（演示/调试）
+ *  1) 未转人工：提问 → AI 流式回答（检索→引用→打字机）
+ *  2) 已转人工：发送 → 直发员工（同一工单线程，AI 不再介入）
+ *  3) 轮询：拉取员工回复与工单状态；刷新页面恢复完整历史
  * ================================================================ */
 let sid = localStorage.getItem('guest_sid') || '';
+let roomNo = localStorage.getItem('guest_room') || '';   // 当前登录房号
 const urlSid = new URLSearchParams(location.search).get('sid');
 if (urlSid) { sid = urlSid; localStorage.setItem('guest_sid', sid); }
 
@@ -102,6 +136,70 @@ let seenStaff = 0;          // 已渲染的员工消息数（防重复）
 
 const msgs = document.getElementById('msgs');
 const input = document.getElementById('q');
+const sendBtn = document.getElementById('send');
+const ROOM_RE = /^[A-Za-z0-9\-]{1,10}$/;   // 与后端校验保持一致
+
+/* —— 房号登录 —— */
+function showBadge(room) {
+  const b = document.getElementById('roomBadge');
+  b.innerHTML = '';
+  b.appendChild(document.createTextNode(`当前房间：${room}`));
+  const a = document.createElement('a');
+  a.textContent = '更换房间';
+  a.onclick = () => {
+    if (!confirm('更换房间将结束当前会话并以新房号开始，确认更换？')) return;
+    localStorage.removeItem('guest_sid');
+    localStorage.removeItem('guest_room');
+    location.href = '/guest';
+  };
+  b.appendChild(a);
+  b.classList.remove('hidden');
+}
+function enableChat() {
+  document.getElementById('gateMask').classList.add('hidden');
+  input.disabled = false;
+  sendBtn.disabled = false;
+  input.focus();
+}
+async function enterByRoom() {
+  const room = document.getElementById('roomInput').value.trim().toUpperCase();
+  const err = document.getElementById('gateErr');
+  if (!ROOM_RE.test(room)) {
+    err.textContent = '房号格式不正确，请输入 1-10 位字母或数字（例如 1208）';
+    return;
+  }
+  document.getElementById('gateBtn').disabled = true;
+  try {
+    localStorage.setItem('guest_room', room);
+    await startSession(room);
+    showBadge(room);
+    enableChat();
+  } catch (e) {
+    err.textContent = '进入失败，请稍后重试';
+  } finally {
+    document.getElementById('gateBtn').disabled = false;
+  }
+}
+
+/* 按房号建立会话：已有同会话直接复用；老匿名会话（无房号）则重建 */
+async function startSession(room) {
+  if (sid) {
+    try {
+      const resp = await fetch(`/guest/sessions/${sid}/messages`);
+      if (resp.ok && (await resp.json()).room_no) { await refreshState(true); return; }
+    } catch { /* 会话失效则重建 */ }
+  }
+  const resp = await fetch('/guest/sessions', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({room_no: room}),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.message);
+  sid = data.guest_session_id;
+  localStorage.setItem('guest_sid', sid);
+  await refreshState(true);
+}
 
 /* —— 渲染 —— */
 function bubble(role, text, who) {
@@ -137,15 +235,17 @@ function renderHistory(messages) {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-/* —— 会话初始化：恢复身份 + 拉历史 + 恢复转人工状态 —— */
+/* 会话初始化：?sid= 调试模式直接进；否则须先过房号门 */
 async function init() {
-  if (!sid) {
-    const resp = await fetch('/guest/sessions', {method: 'POST'});
-    sid = (await resp.json()).guest_session_id;
-    localStorage.setItem('guest_sid', sid);
+  if (urlSid) { enableChat(); await refreshState(true); if (handoff && !resolved) startPolling(); return; }
+  if (roomNo) {
+    showBadge(roomNo);
+    try {
+      await startSession(roomNo);
+      enableChat();
+      if (handoff && !resolved) startPolling();
+    } catch { /* 服务端异常时保持房号门可重试 */ }
   }
-  await refreshState(true);
-  if (handoff && !resolved) startPolling();
 }
 
 /* 拉取会话状态与全量消息（进入页面 / 轮询用） */
@@ -195,13 +295,13 @@ async function send() {
   const question = input.value.trim();
   if (!question) return;
   input.value = '';
-  document.getElementById('send').disabled = true;
+  sendBtn.disabled = true;
   document.getElementById('status').textContent = '';
 
   if (handoff) { await sendToStaff(question); }
   else         { await askAI(question); }
 
-  document.getElementById('send').disabled = false;
+  sendBtn.disabled = false;
 }
 
 /* 转人工后：消息直发员工，本地立即上屏（员工端 10 秒内可见） */
@@ -290,6 +390,9 @@ async function poll() {
 }
 function startPolling() { poll(); polling = setInterval(poll, 3000); }
 
+document.getElementById('roomInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); enterByRoom(); }
+});
 input.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });

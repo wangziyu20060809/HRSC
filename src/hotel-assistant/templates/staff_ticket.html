@@ -43,6 +43,7 @@
         <table>
           <tr>
             <th>状态</th>
+            <th>房间</th>
             <th>客人备注</th>
             <th>处理人</th>
             <th>发起时间</th>
@@ -53,6 +54,7 @@
               {% elif session.assignee_name %}<span class="tag info">处理中 · {{ session.assignee_name }}</span>
               {% else %}<span class="tag warn">待认领</span>{% endif %}
             </td>
+            <td><span class="tag info">{{ session.room_no or '—' }}</span></td>
             <td>{{ session.escalated_note or '—' }}</td>
             <td>{{ session.assignee_name or '—' }}</td>
             <td>{{ session.created_at }}</td>

@@ -127,6 +127,7 @@ def init_db() -> None:
         _ensure_column(c, "sessions", "assignee_id", "assignee_id TEXT")
         _ensure_column(c, "sessions", "assignee_name", "assignee_name TEXT")
         _ensure_column(c, "sessions", "resolved_at", "resolved_at TEXT")
+        _ensure_column(c, "sessions", "room_no", "room_no TEXT NOT NULL DEFAULT ''")
         _ensure_column(c, "messages", "actor", "actor TEXT NOT NULL DEFAULT 'guest'")
         _ensure_column(c, "messages", "flagged", "flagged INTEGER NOT NULL DEFAULT 0")
         _ensure_column(c, "messages", "flag_reason", "flag_reason TEXT")
@@ -135,14 +136,16 @@ def init_db() -> None:
 # =====================================================================
 # 会话
 # =====================================================================
-def create_session(user_id: str = "", channel: str = "staff", title: str = "新会话") -> dict:
+def create_session(user_id: str = "", channel: str = "staff", title: str = "新会话",
+                   room_no: str = "") -> dict:
+    """创建会话；客人会话会携带房号（room_no），员工/管理端据此识别客人"""
     sid = str(uuid.uuid4())
     now = _now()
     with _conn() as c:
         c.execute(
-            "INSERT INTO sessions(id,user_id,title,status,channel,created_at,last_active_at)"
-            " VALUES(?,?,?,?,?,?,?)",
-            (sid, user_id, title, "active", channel, now, now),
+            "INSERT INTO sessions(id,user_id,title,status,channel,room_no,created_at,last_active_at)"
+            " VALUES(?,?,?,?,?,?,?,?)",
+            (sid, user_id, title, "active", channel, room_no, now, now),
         )
     return {"session_id": sid, "title": title, "created_at": now}
 
@@ -381,7 +384,7 @@ def list_tickets(status: str = "pending") -> list[dict]:
     }[status]
     with _conn() as c:
         rows = c.execute(
-            f"SELECT id,title,escalated_note,assignee_name,resolved_at,created_at,last_active_at"
+            f"SELECT id,title,room_no,escalated_note,assignee_name,resolved_at,created_at,last_active_at"
             f" FROM sessions WHERE {where} ORDER BY last_active_at DESC LIMIT 100", params,
         ).fetchall()
     return [dict(r) for r in rows]
@@ -423,7 +426,7 @@ def audit_messages(channel: str = "", start: str = "", end: str = "",
         cond.append("m.flagged=0")
     sql = (
         "SELECT m.id, m.session_id, m.role, m.actor, m.content, m.flagged, m.flag_reason,"
-        " m.created_at, s.channel, s.title AS session_title "
+        " m.created_at, s.channel, s.title AS session_title, s.room_no "
         "FROM messages m JOIN sessions s ON m.session_id=s.id "
         f"WHERE {' AND '.join(cond)} ORDER BY m.created_at DESC LIMIT ?"
     )

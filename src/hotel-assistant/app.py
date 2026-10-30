@@ -20,6 +20,7 @@ app.py — 酒店房态管理问答系统 · FastAPI 入口（三角色：guest 
 
 import asyncio
 import os
+import re
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -199,10 +200,18 @@ def _chat_guard(session: dict, question: str) -> None:
         raise ApiError(42901, "请求过于频繁，请等待上一个回答完成", 429)
 
 
+class GuestSessionBody(BaseModel):
+    """客人入住房号（轻量登录）：1-10 位字母/数字/短横线，例如 1208、A101"""
+    room_no: str = ""
+
+
 @app.post("/guest/sessions")
-def guest_sessions():
-    s = db.create_session(channel="guest")
-    return {"guest_session_id": s["session_id"]}
+def guest_sessions(body: GuestSessionBody | None = None):
+    room_no = (body.room_no if body else "").strip().upper()
+    if room_no and not re.fullmatch(r"[A-Z0-9\-]{1,10}", room_no):
+        raise ApiError(40002, "房号格式不正确，请输入 1-10 位字母或数字（例如 1208）", 400)
+    s = db.create_session(channel="guest", room_no=room_no)
+    return {"guest_session_id": s["session_id"], "room_no": room_no}
 
 
 @app.post("/guest/chat")
@@ -236,7 +245,8 @@ def guest_messages(sid: str):
     return {"messages": db.get_all_messages(sid),
             "assignee_name": session.get("assignee_name") or "",
             "resolved": bool(session.get("resolved_at")),
-            "escalated": bool(session.get("escalated"))}
+            "escalated": bool(session.get("escalated")),
+            "room_no": session.get("room_no") or ""}
 
 
 class SayBody(BaseModel):

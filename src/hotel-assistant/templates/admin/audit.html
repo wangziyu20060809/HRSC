@@ -51,12 +51,13 @@ async function load() {
     return;
   }
   // 违规标记列：可人工改判（标记 / 取消标记 + 理由）
-  box.innerHTML = `<table><tr><th>时间</th><th>渠道</th><th>会话</th><th>发言人</th>
+  box.innerHTML = `<table><tr><th>时间</th><th>渠道</th><th>房间</th><th>会话</th><th>发言人</th>
     <th style="width:40%">内容</th><th>标记</th><th>操作</th></tr>` +
     data.messages.map(m => `
       <tr>
         <td style="white-space:nowrap">${m.created_at}</td>
         <td>${m.channel === 'guest' ? '客人端' : '员工端'}</td>
+        <td>${m.channel === 'guest' ? (m.room_no || '—') : '—'}</td>
         <td class="note" title="${m.session_title || ''}">${m.session_title || '—'}</td>
         <td>${ACTOR[m.actor] || m.actor}·${ROLE[m.role] || m.role}</td>
         <td>${(m.content || '').slice(0, 120)}${(m.content || '').length > 120 ? '…' : ''}</td>
