@@ -89,6 +89,9 @@
  *  3) 转人工后：轮询拉取员工回复，直到工单完结
  * ================================================================ */
 let sid = localStorage.getItem('guest_sid') || '';
+/* 调试/演示：?sid=xxx 可直接打开指定会话（例如员工处理完，从工单页跳回客人视角） */
+const urlSid = new URLSearchParams(location.search).get('sid');
+if (urlSid) { sid = urlSid; localStorage.setItem('guest_sid', sid); }
 let polling = null;              // 转人工后的轮询定时器
 
 /* —— 会话初始化 —— */
