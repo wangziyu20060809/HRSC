@@ -56,6 +56,10 @@ HRSC/
 │   ├── engine.js                 # 业务核心：三态投影/缺口检出/校验/脱敏
 │   ├── store.js                  # localStorage 状态与闸门
 │   ├── app.js                    # 路由与六个视图
+│   ├── prototype/                # 阶段1最小原型（Python CLI 制度问答）
+│   │   ├── stage1_rag_cli.py     # RAG：条款切500字→FAISS；BM25+向量 RRF 检索→LLM
+│   │   ├── data/                 # 示例制度文档
+│   │   └── requirements.txt
 │   └── data/                     # 演示数据（房型/规则/九阶段课程）
 ├── tests/test_engine.js          # 业务核心单测（Node 原生运行）
 ├── examples/                     # 使用示例说明

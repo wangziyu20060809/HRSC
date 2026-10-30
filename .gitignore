@@ -30,4 +30,4 @@ output/
 .current_rid
 
 # 阶段1原型生成的检索索引
-backend/prototype/rag_index/
+src/prototype/rag_index/

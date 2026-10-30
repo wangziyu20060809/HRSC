@@ -142,12 +142,19 @@ def _embed_local_fallback(texts: list[str], dim: int = 256) -> np.ndarray:
     """
     离线兜底向量：字符 2-gram → 哈希桶累加 → L2 归一化。
     无语义能力，但保证脚本零配置可运行；结果中会标注"离线兜底向量"。
+
+    注意：必须用稳定的哈希算法（md5），不能用内置 hash()——
+    内置 hash 随进程随机化，会导致同一文档每次入库的向量不同、
+    检索结果不可复现（阶段 2 接真实 embedding 接口后此函数删除）。
     """
+    import hashlib
+
     mat = np.zeros((len(texts), dim), dtype=np.float32)
     for i, t in enumerate(texts):
         for j in range(len(t) - 1):
             gram = t[j : j + 2]
-            mat[i, hash(gram) % dim] += 1.0  # 确定性哈希落桶
+            bucket = int.from_bytes(hashlib.md5(gram.encode("utf-8")).digest()[:4], "big")
+            mat[i, bucket % dim] += 1.0  # 确定性落桶
     norm = np.linalg.norm(mat, axis=1, keepdims=True)
     norm[norm == 0] = 1.0
     return mat / norm
