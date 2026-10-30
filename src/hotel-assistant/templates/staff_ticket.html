@@ -82,9 +82,10 @@
         {% endif %}
       </div>
 
-      <!-- 对话记录：客人提问 + AI 回答 + 员工回复，违规标记可见 -->
+      <!-- 对话记录：客人提问 + AI 回答 + 双方人工对话，自动刷新 -->
       <div class="panel conv">
-        <h3>对话记录</h3>
+        <h3>对话记录 <span class="hint" style="font-weight:normal">（每 5 秒自动刷新，客人新消息实时可见）</span></h3>
+        <div id="conv">
         {% for m in messages %}
         <div class="msg {{ m.actor }}">
           <div class="meta">
@@ -94,12 +95,17 @@
           {% if m.flagged %}<div class="flag">⚠ 违规标记：{{ m.flag_reason or '待管理员复核' }}</div>{% endif %}
         </div>
         {% endfor %}
+        </div>
       </div>
     </div>
   </main>
 </div>
 <script>
 const SID = '{{ session.id }}';
+const ACTOR = {guest: '客人', ai: '智能助手', staff: '员工'};
+let lastCount = {{ messages|length }};
+let flashOn = false;
+
 async function post(url, body) {
   const resp = await fetch(url, {
     method: 'POST',
@@ -110,11 +116,50 @@ async function post(url, body) {
   if (!resp.ok) { alert(data.message || '操作失败'); return null; }
   return data;
 }
+
+/* 对话区渲染（初始服务端渲染 + 轮询重建共用同一套结构） */
+function renderConv(messages) {
+  const box = document.getElementById('conv');
+  box.innerHTML = messages.map(m => `
+    <div class="msg ${m.actor}">
+      <div class="meta">${ACTOR[m.actor] || m.actor} · ${m.created_at}</div>
+      <div class="body"></div>
+      ${m.flagged ? `<div class="flag">⚠ 违规标记：${m.flag_reason || '待管理员复核'}</div>` : ''}
+    </div>`).join('');
+  // 用 textContent 填充正文，防止内容里的 HTML 被注入执行
+  [...box.querySelectorAll('.body')].forEach((el, i) => el.textContent = messages[i].content);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* 每 5 秒拉取最新消息：客人的直发消息实时出现在对话区 */
+async function refresh() {
+  const resp = await fetch(`/sessions/${SID}/messages`);
+  if (!resp.ok) return;
+  const data = await resp.json();
+  if (data.messages.length !== lastCount) {
+    const grew = data.messages.length > lastCount;
+    lastCount = data.messages.length;
+    renderConv(data.messages);
+    if (grew) flashOn = true;   // 有新消息，闪烁标题提醒
+  }
+}
+setInterval(refresh, 5000);
+setInterval(() => {
+  document.title = flashOn
+    ? (document.title.startsWith('【新消息】') ? '工单详情 · 酒店房态管理' : '【新消息】工单详情 · 酒店房态管理')
+    : '工单详情 · 酒店房态管理';
+}, 800);
+
 async function claim()   { if (await post(`/staff/tickets/${SID}/claim`)) location.reload(); }
 async function reply() {
-  const content = document.getElementById('reply').value.trim();
+  const box = document.getElementById('reply');
+  const content = box.value.trim();
   if (!content) { alert('回复内容不能为空'); return; }
-  if (await post(`/staff/tickets/${SID}/reply`, {content})) location.reload();
+  const data = await post(`/staff/tickets/${SID}/reply`, {content});
+  if (!data) return;
+  box.value = '';
+  await refresh();          // 回复后立即刷新对话区（不用整页 reload）
+  lastCount += 0;
 }
 async function resolve() {
   if (!confirm('确认完结该工单？')) return;

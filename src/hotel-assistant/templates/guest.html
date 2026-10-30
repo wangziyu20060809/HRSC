@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>智能服务 · 山海旅居</title>
 <style>
-  /* 客人端：免登录问答 + 转人工；欢迎语与 FAQ 由管理员在后台维护 */
+  /* 客人端：免登录问答 + 转人工后同一对话框内与员工对话，全量记录持久保存 */
   *{box-sizing:border-box}
   body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:#F4F6F8;color:#1F2937}
   .wrap{max-width:760px;margin:0 auto;padding:20px 16px 40px}
@@ -29,6 +29,8 @@
   .msg.ai{background:#F4F6F8;border-radius:12px 12px 12px 2px;padding:10px 14px}
   .msg.staff{background:#FBF3E2;border:1px solid #EBD9AE;border-radius:12px 12px 12px 2px;
              padding:10px 14px}
+  .msg.sys{background:#EAF2FB;color:#2E5FA3;font-size:12.5px;text-align:center;
+           max-width:100%;padding:6px 10px;border-radius:8px}
   .msg .who{font-size:11.5px;color:#8A94A0;margin-bottom:4px}
   .status{font-size:12.5px;color:#8A94A0;padding:0 16px 6px}
   .cites{margin-top:8px}
@@ -55,7 +57,7 @@
     <p>{{ page.welcome }}</p>
   </div>
 
-  <!-- 常见问题：点击问题展开答案，点击问题文本直接发问 -->
+  <!-- 常见问题：点击问题直接发问 -->
   <div class="faq">
     <h2>常见问题</h2>
     {% for item in page.faq %}
@@ -66,7 +68,7 @@
     {% endfor %}
   </div>
 
-  <!-- 对话区 -->
+  <!-- 对话区：AI 问答与人工对话共用同一个线程 -->
   <div class="chat">
     <div class="msgs" id="msgs"></div>
     <div class="status" id="status"></div>
@@ -75,7 +77,7 @@
       <button id="send" onclick="send()">发送</button>
     </div>
     <div class="tools">
-      <a onclick="escalate()">转人工（值班员工为您服务）</a>
+      <a id="escalateLink" onclick="escalate()">转人工（值班员工为您服务）</a>
       <span id="handoffState" class="handoff"></span>
     </div>
   </div>
@@ -84,26 +86,87 @@
 <script>
 /* ================================================================
  * 客人端逻辑：
- *  1) 免登录：首次进入创建会话，会话 ID 存 localStorage，刷新不丢
- *  2) 提问 → SSE 流式回答（检索状态 → 引用卡片 → 打字机 → 完成）
- *  3) 转人工后：轮询拉取员工回复，直到工单完结
+ *  1) 免登录：会话 ID 存 localStorage；?sid= 可指定会话（演示/调试）
+ *  2) 未转人工：提问 → AI 流式回答（检索→引用→打字机）
+ *  3) 已转人工：发送 → 直发员工（同一工单线程，AI 不再介入）
+ *  4) 轮询：拉取员工回复与工单状态；刷新页面恢复完整历史
  * ================================================================ */
 let sid = localStorage.getItem('guest_sid') || '';
-/* 调试/演示：?sid=xxx 可直接打开指定会话（例如员工处理完，从工单页跳回客人视角） */
 const urlSid = new URLSearchParams(location.search).get('sid');
 if (urlSid) { sid = urlSid; localStorage.setItem('guest_sid', sid); }
-let polling = null;              // 转人工后的轮询定时器
 
-/* —— 会话初始化 —— */
-async function ensureSession() {
-  if (sid) return;
-  const resp = await fetch('/guest/sessions', {method: 'POST'});
-  const data = await resp.json();
-  sid = data.guest_session_id;
-  localStorage.setItem('guest_sid', sid);
+let handoff = false;        // 是否已转人工
+let resolved = false;       // 工单是否已完结
+let polling = null;         // 轮询定时器
+let seenStaff = 0;          // 已渲染的员工消息数（防重复）
+
+const msgs = document.getElementById('msgs');
+const input = document.getElementById('q');
+
+/* —— 渲染 —— */
+function bubble(role, text, who) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if (who) {
+    div.innerHTML = '<div class="who"></div><div class="body"></div>';
+    div.querySelector('.who').textContent = who;
+    div.querySelector('.body').textContent = text;
+  } else {
+    div.textContent = text;
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+function aiBubble() {
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = '<div class="who">智能助手</div><div class="body"></div><div class="cites"></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+function renderHistory(messages) {
+  msgs.innerHTML = '';
+  seenStaff = 0;
+  for (const m of messages) {
+    if (m.actor === 'staff') { seenStaff++; bubble('staff', m.content, '员工回复'); }
+    else if (m.actor === 'ai') { const b = aiBubble(); b.querySelector('.body').textContent = m.content; }
+    else if (m.role === 'user') bubble('user', m.content);
+  }
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
-/* —— SSE 解析：按 event:/data: 行切分 —— */
+/* —— 会话初始化：恢复身份 + 拉历史 + 恢复转人工状态 —— */
+async function init() {
+  if (!sid) {
+    const resp = await fetch('/guest/sessions', {method: 'POST'});
+    sid = (await resp.json()).guest_session_id;
+    localStorage.setItem('guest_sid', sid);
+  }
+  await refreshState(true);
+  if (handoff && !resolved) startPolling();
+}
+
+/* 拉取会话状态与全量消息（进入页面 / 轮询用） */
+async function refreshState(renderAll) {
+  const resp = await fetch(`/guest/sessions/${sid}/messages`);
+  if (!resp.ok) return;
+  const data = await resp.json();
+  if (renderAll) renderHistory(data.messages);
+  handoff = data.escalated;
+  resolved = data.resolved;
+  if (handoff) {
+    document.getElementById('escalateLink').style.display = 'none';
+    document.getElementById('handoffState').textContent = resolved
+      ? '该工单已完结，感谢反馈'
+      : (data.assignee_name ? `员工 ${data.assignee_name} 为您服务中` : '已转人工，等待员工认领…');
+    input.placeholder = resolved ? '工单已完结，如有新问题请刷新页面开始新会话'
+                                 : '留言给值班员工，回复将实时显示在这里';
+  }
+}
+
+/* —— SSE 解析 —— */
 async function readSSE(resp, handlers) {
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
@@ -113,7 +176,7 @@ async function readSSE(resp, handlers) {
     if (done) break;
     buf += decoder.decode(value, {stream: true});
     let idx;
-    while ((idx = buf.indexOf('\n\n')) >= 0) {   // 一个完整 SSE 帧以空行结束
+    while ((idx = buf.indexOf('\n\n')) >= 0) {
       const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
       event = ''; data = '';
       for (const line of frame.split('\n')) {
@@ -127,46 +190,46 @@ async function readSSE(resp, handlers) {
   }
 }
 
-/* —— 消息渲染 —— */
-const msgs = document.getElementById('msgs');
-function bubble(role, text, who) {
-  const div = document.createElement('div');
-  div.className = 'msg ' + role;
-  if (who) div.innerHTML = `<div class="who"></div><div class="body"></div>`;
-  (who ? div.querySelector('.who') : div).textContent = who || '';
-  (who ? div.querySelector('.body') : div).textContent = text;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-  return div;
-}
-function aiBubble() {   // AI 回答容器：先放引用，正文打字机追加
-  const div = document.createElement('div');
-  div.className = 'msg ai';
-  div.innerHTML = '<div class="who">智能助手</div><div class="body"></div><div class="cites"></div>';
-  msgs.appendChild(div);
-  return div;
-}
-
-/* —— 发送问题 —— */
+/* —— 发送：按状态路由（转人工→员工 / 否则→AI） —— */
 async function send() {
-  const input = document.getElementById('q');
   const question = input.value.trim();
   if (!question) return;
-  await ensureSession();
   input.value = '';
   document.getElementById('send').disabled = true;
-  bubble('user', question);
   document.getElementById('status').textContent = '';
 
+  if (handoff) { await sendToStaff(question); }
+  else         { await askAI(question); }
+
+  document.getElementById('send').disabled = false;
+}
+
+/* 转人工后：消息直发员工，本地立即上屏（员工端 10 秒内可见） */
+async function sendToStaff(question) {
+  bubble('user', question);
+  const resp = await fetch(`/guest/sessions/${sid}/say`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({content: question}),
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    document.getElementById('status').textContent = data.message || '发送失败';
+    if (resolved) await refreshState(false);
+  }
+}
+
+/* 未转人工：AI 流式回答 */
+async function askAI(question) {
+  bubble('user', question);
   const resp = await fetch('/guest/chat', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({session_id: sid, question}),
   });
-  if (!resp.ok) {                       // 非流式错误（统一错误信封）
+  if (!resp.ok) {
     const data = await resp.json().catch(() => ({}));
     document.getElementById('status').textContent = data.message || '服务异常，请稍后重试';
-    document.getElementById('send').disabled = false;
     return;
   }
   const ai = aiBubble();
@@ -183,19 +246,16 @@ async function send() {
     error(d)   { document.getElementById('status').textContent = d.message; },
     done()     { document.getElementById('status').textContent = ''; },
   });
-  document.getElementById('send').disabled = false;
 }
 
 /* FAQ 点击问题直接发问 */
 function askFaq(el) {
-  const q = el.parentElement.dataset.q;
-  document.getElementById('q').value = q;
+  input.value = el.parentElement.dataset.q;
   send();
 }
 
-/* —— 转人工：提交备注后轮询员工回复 —— */
+/* —— 转人工 —— */
 async function escalate() {
-  await ensureSession();
   const note = prompt('请简要说明您遇到的问题（可不填）：') ?? '';
   const resp = await fetch(`/guest/sessions/${sid}/escalate`, {
     method: 'POST',
@@ -204,41 +264,36 @@ async function escalate() {
   });
   const data = await resp.json();
   document.getElementById('handoffState').textContent = data.message || '';
-  if (resp.ok && !polling) startPolling();
+  if (!resp.ok) return;
+  handoff = true;
+  bubble('sys', '已转人工，您接下来发送的消息将直接由值班员工回复');
+  document.getElementById('escalateLink').style.display = 'none';
+  startPolling();
 }
 
-/* 轮询：拉全量消息，把员工新回复渲染出来（3 秒一次） */
-let seenStaff = 0;
+/* 轮询（3 秒）：渲染新来的员工回复，同步工单状态 */
 async function poll() {
   const resp = await fetch(`/guest/sessions/${sid}/messages`);
   if (!resp.ok) return;
   const data = await resp.json();
   const staffMsgs = data.messages.filter(m => m.actor === 'staff');
   for (const m of staffMsgs.slice(seenStaff)) {
+    seenStaff++;
     bubble('staff', m.content, `员工 ${data.assignee_name || ''} 回复`);
   }
-  seenStaff = staffMsgs.length;
-  if (data.resolved) {
+  if (data.resolved && !resolved) {
+    resolved = true;
     document.getElementById('handoffState').textContent = '该工单已完结，感谢反馈';
+    input.placeholder = '工单已完结，如有新问题请刷新页面开始新会话';
     clearInterval(polling); polling = null;
   }
 }
 function startPolling() { poll(); polling = setInterval(poll, 3000); }
 
-/* 若本地已有转人工会话，刷新页面后恢复轮询 */
-(async () => {
-  await ensureSession();
-  const resp = await fetch(`/guest/sessions/${sid}/messages`);
-  if (resp.ok) {
-    const data = await resp.json();
-    if (data.assignee_name) startPolling();
-  }
-})();
-
-/* 回车发送 */
-document.getElementById('q').addEventListener('keydown', e => {
+input.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
+init();
 </script>
 </body>
 </html>

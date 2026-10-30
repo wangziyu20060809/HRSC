@@ -235,7 +235,34 @@ def guest_messages(sid: str):
         raise ApiError(40001, "会话不存在", 404)
     return {"messages": db.get_all_messages(sid),
             "assignee_name": session.get("assignee_name") or "",
-            "resolved": bool(session.get("resolved_at"))}
+            "resolved": bool(session.get("resolved_at")),
+            "escalated": bool(session.get("escalated"))}
+
+
+class SayBody(BaseModel):
+    """转人工后客人直发员工的消息体"""
+    content: str = Field(min_length=1, max_length=500)
+
+
+@app.post("/guest/sessions/{sid}/say")
+def guest_say(sid: str, body: SayBody):
+    """转人工后：客人与员工在同一工单线程内直接对话（AI 不再介入）。
+
+    前提：会话已转人工且工单未完结；消息同样过违规规则并留痕。
+    """
+    session = db.get_session(sid)
+    if not session or session["channel"] != "guest":
+        raise ApiError(40001, "会话不存在", 404)
+    if not session["escalated"]:
+        raise ApiError(40901, "请先点击「转人工」，再与员工对话", 409)
+    if session["resolved_at"]:
+        raise ApiError(40901, "该工单已完结，如有新问题请重新发起会话", 409)
+    content = body.content.strip()
+    flagged, flag_reason = rules.check_violation(content)  # 客人直发消息同样留痕
+    db.add_message(sid, "user", content, actor="guest",
+                   flagged=flagged, flag_reason=flag_reason)
+    db.touch_session(sid)
+    return {"code": 0, "message": "已发送给员工"}
 
 
 # =====================================================================
