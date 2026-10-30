@@ -184,9 +184,16 @@ def split_policy(doc_text: str, chunk_size: int = None) -> list[dict]:
     else:  # 无条款结构：整篇当一块，走硬切
         sections.append(("", doc_text.strip()))
 
-    # —— 步骤 2：超过 chunk_size 的条款继续细切（在句号处优先断开）——
+    # —— 步骤 2：剔除章节标题行（「# …」），避免混入切片正文 ——
+    cleaned = [
+        (no, "\n".join(ln for ln in body.splitlines() if not ln.lstrip().startswith("#")).strip())
+        for no, body in sections
+    ]
+    cleaned = [(no, body) for no, body in cleaned if body]
+
+    # —— 步骤 3：超过 chunk_size 的条款继续细切（在句号处优先断开）——
     chunks: list[dict] = []
-    for clause_no, body in sections:
+    for clause_no, body in cleaned:
         if len(body) <= chunk_size:
             chunks.append({"clause_no": clause_no, "content": body})
             continue
@@ -201,7 +208,7 @@ def split_policy(doc_text: str, chunk_size: int = None) -> list[dict]:
         if buf.strip():
             chunks.append({"clause_no": clause_no, "content": buf.strip()})
 
-    # —— 步骤 3：编号并返回 ——
+    # —— 步骤 4：编号并返回 ——
     for i, c in enumerate(chunks):
         c["seq"] = i
     return chunks
