@@ -38,3 +38,9 @@ src/prototype/rag_index/
 src/hotel-assistant/rag_index/
 src/hotel-assistant/*.db
 src/hotel-assistant/*.db-*
+
+# 房态 MVP 运行时数据（演示库、本地会话、抓包脚本产物）
+src/room-status-mvp/data/*.db
+src/room-status-mvp/data/*.db-*
+src/room-status-mvp/data/*.txt
+src/room-status-mvp/data/*.json

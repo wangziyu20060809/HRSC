@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>运营管理 · 山海旅居</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-role="{{ user.role }}" data-user="{{ user.display }}">
+<div class="app">
+  <header class="topbar">
+    <div class="logo"><span class="mark">山</span> {{ hotel }} · 运营管理</div>
+    <div class="clock" id="clock"></div>
+    <div class="spacer"></div>
+    <span class="llm-badge" id="llm-badge">助手状态</span>
+    <div class="user-chip">
+      <span class="avatar">{{ user.display[0] }}</span>
+      <div><div class="name">{{ user.display }}</div><div class="role">{{ user.role_label }} · {{ user.post }}</div></div>
+    </div>
+    <button class="btn ghost small" id="logout">退出</button>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="overview">概览</button>
+    <button class="tab" data-view="kb">知识库</button>
+    <button class="tab" data-view="agent">助手配置</button>
+    <button class="tab" data-view="audit">审计</button>
+    <button class="tab" data-view="users">账号</button>
+  </nav>
+
+  <main>
+    <!-- 概览 -->
+    <section class="view active" id="view-overview">
+      <div class="kpis" id="ov-kpis"></div>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>近 7 天：拦截 vs 可售产出</h3><span class="sub">拦截 = 被系统挡下的「本该发生的房态错误」</span></div>
+          <div class="panel-body"><div id="chart"></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>超时房间</h3><span class="sub">需要当班处置</span></div>
+          <div class="panel-body" style="padding:0 16px 8px"><div id="ov-overdue"></div></div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:16px">
+        <div class="panel">
+          <div class="panel-head"><h3>助手运行情况</h3><span class="sub">近 7 天</span></div>
+          <div class="panel-body" id="ov-agent"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>口径与基线</h3><span class="sub">来自访谈记录，需按样本复核</span></div>
+          <div class="panel-body" id="ov-baseline"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 知识库 -->
+    <section class="view" id="view-kb">
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>制度文档</h3><span class="sub" id="kb-stats"></span>
+            <div class="spacer"></div>
+            <button class="btn ghost small" id="kb-new">新建</button>
+            <button class="btn ghost small" id="kb-reindex">重建索引</button>
+          </div>
+          <div class="panel-body" style="padding:0 16px 8px"><div id="kb-list"><div class="empty">加载中…</div></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>文档编辑</h3><span class="sub">保存后立即重建检索索引</span></div>
+          <div class="panel-body">
+            <div class="inline-form" style="margin-bottom:10px">
+              <div class="field" style="flex:1"><label>标题</label><input id="kb-title" placeholder="如：房态口径与三态定义"></div>
+              <div class="field" style="width:120px"><label>分类</label><input id="kb-cat" placeholder="制度" value="制度"></div>
+            </div>
+            <div class="field"><label>正文（Markdown，按空行分段切片）</label>
+              <textarea id="kb-body" rows="14" placeholder="# 标题&#10;适用岗位：…&#10;&#10;正文…"></textarea></div>
+            <div class="actions-row">
+              <button class="btn" id="kb-save">保存并索引</button>
+              <button class="btn ghost" id="kb-delete">删除</button>
+              <button class="btn ghost" id="kb-test">检索测试</button>
+            </div>
+            <div id="kb-test-result" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 助手配置 -->
+    <section class="view" id="view-agent">
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>运行参数</h3><span class="sub">保存后下一个问题生效</span></div>
+          <div class="panel-body" id="settings-form"><div class="empty">加载中…</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>工具清单</h3><span class="sub">写操作只生成待确认动作</span></div>
+          <div class="panel-body" style="padding:0 16px 8px"><div id="tools-list"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 审计 -->
+    <section class="view" id="view-audit">
+      <div class="panel">
+        <div class="panel-head"><h3>操作审计</h3><span class="sub">房态迁移、助手提案与确认、配置变更全部留痕</span>
+          <div class="spacer"></div>
+          <input id="audit-q" placeholder="按人 / 房号 / 动作过滤" style="padding:7px 10px;border:1px solid var(--line-strong);border-radius:8px;width:210px">
+          <button class="btn ghost small" id="audit-search">查询</button>
+        </div>
+        <div class="panel-body" style="padding:0 16px 8px"><div id="audit-table"><div class="empty">加载中…</div></div></div>
+      </div>
+    </section>
+
+    <!-- 账号 -->
+    <section class="view" id="view-users">
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>账号与岗位</h3><span class="sub">岗位决定能改哪一步房态</span></div>
+          <div class="panel-body" style="padding:0 16px 8px"><div id="user-table"><div class="empty">加载中…</div></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>新建账号</h3></div>
+          <div class="panel-body">
+            <div class="inline-form" style="margin-bottom:8px">
+              <div class="field" style="flex:1"><label>账号</label><input id="u-username" placeholder="登录名"></div>
+              <div class="field" style="flex:1"><label>姓名</label><input id="u-display" placeholder="显示名"></div>
+            </div>
+            <div class="inline-form" style="margin-bottom:8px">
+              <div class="field" style="flex:1"><label>岗位</label>
+                <select id="u-role">
+                  <option value="front">前台（办入住/退房）</option>
+                  <option value="house">客房（清扫/报修）</option>
+                  <option value="qa">质检（查房结论）</option>
+                  <option value="admin">运营（全部）</option>
+                </select></div>
+              <div class="field" style="flex:1"><label>岗位说明</label><input id="u-post" placeholder="如 前台"></div>
+            </div>
+            <div class="field"><label>初始口令（≥6 位）</label><input id="u-pwd" type="password"></div>
+            <button class="btn" id="u-create">创建</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-mask" id="modal-mask">
+  <div class="modal">
+    <div class="modal-head" id="m-title">操作</div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="modal-foot"><button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-ok">确认</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="/static/common.js"></script>
+<script src="/static/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · 山海旅居房态协同</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <aside class="login-side">
+    <div>
+      <div class="brand-row"><span class="brand-mark">山</span> 山海旅居 · 房态与入住协同</div>
+      <div style="margin-top:56px">
+        <h1>客房准备好了，<br>客人还在等。</h1>
+        <p class="lead">客房部标了「已清扫」，前台以为可入住，查房却还没完成。<br>
+        这套系统只做一件事：把「已清扫」和「可售」分开，让前台在开房前就知道这间房到底能不能住。</p>
+        <div class="login-quote">
+          「高峰入住等待 38 分钟，房态错误每周 24 次。<br>我们要的不是再多的群消息，是一个说得清的口径。」
+          <div style="margin-top:8px;opacity:.7">— 顾明岚 · 酒店运营经理（访谈记录）</div>
+        </div>
+      </div>
+    </div>
+    <div class="login-stats">
+      <div><strong>7</strong><span>房态节点</span></div>
+      <div><strong>10</strong><span>受控迁移</span></div>
+      <div><strong>1</strong><span>可售口径</span></div>
+    </div>
+  </aside>
+
+  <main class="login-main">
+    <div class="login-card">
+      <h2>值班登录</h2>
+      <p class="sub">按岗位分配权限：前台办入住、客房管清扫、质检下结论、运营改口径。</p>
+      <form id="login-form">
+        <div class="field">
+          <label for="username">账号</label>
+          <input id="username" name="username" autocomplete="username" placeholder="front / house / qa / admin" required>
+        </div>
+        <div class="field">
+          <label for="password">口令</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+        </div>
+        <button class="btn block" type="submit" id="login-btn" style="margin-top:8px">进入工作台</button>
+      </form>
+      <div class="seed-hint">
+        <p>演示账号（点击填入，仅本地演练环境）</p>
+        <div class="seed-chips">
+          <button class="chip-btn" data-u="front" data-p="Front@123">前台 · 林亦舟</button>
+          <button class="chip-btn" data-u="house" data-p="House@123">客房 · 唐映秋</button>
+          <button class="chip-btn" data-u="qa" data-p="Qa@123">质检 · 傅景</button>
+          <button class="chip-btn" data-u="admin" data-p="Admin@123">运营 · 顾明岚</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="toasts"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+document.querySelectorAll('.chip-btn').forEach((b) => {
+  b.addEventListener('click', () => {
+    $('#username').value = b.dataset.u;
+    $('#password').value = b.dataset.p;
+    $('#password').focus();
+  });
+});
+$('#login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('#login-btn');
+  btn.disabled = true; btn.textContent = '登录中…';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: $('#username').value.trim(), password: $('#password').value })
+    });
+    const data = await r.json();
+    if (!r.ok || data.code) throw new Error(data.message || '登录失败');
+    location.href = data.redirect;
+  } catch (err) {
+    btn.disabled = false; btn.textContent = '进入工作台';
+    const t = document.createElement('div');
+    t.className = 'toast err'; t.textContent = err.message;
+    $('#toasts').appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  }
+});
+</script>
+</body>
+</html>

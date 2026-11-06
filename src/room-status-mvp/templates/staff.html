@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>员工工作台 · 山海旅居</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-role="{{ user.role }}" data-user="{{ user.display }}">
+<div class="app">
+  <header class="topbar">
+    <div class="logo"><span class="mark">山</span> {{ hotel }} · 房态协同</div>
+    <div class="clock" id="clock"></div>
+    <div class="spacer"></div>
+    <span class="llm-badge" id="llm-badge">助手状态</span>
+    <div class="user-chip">
+      <span class="avatar">{{ user.display[0] }}</span>
+      <div><div class="name">{{ user.display }}</div><div class="role">{{ user.role_label }} · {{ user.post }}</div></div>
+    </div>
+    <button class="btn ghost small" id="logout">退出</button>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="board">房态看板</button>
+    <button class="tab" data-view="checkin">入住办理</button>
+    <button class="tab" data-view="tasks">待办队列 <span class="dot" id="task-dot" hidden>0</span></button>
+    <button class="tab" data-view="handover">交接班</button>
+    <button class="tab" data-view="agent">值班助手</button>
+  </nav>
+
+  <main>
+    <!-- 看板 -->
+    <section class="view active" id="view-board">
+      <div class="kpis" id="kpis"></div>
+      <div class="toolbar">
+        <div class="seg" id="state-filter">
+          <button class="active" data-s="">全部</button>
+          <button data-s="ready">可售</button>
+          <button data-s="clean">待查房</button>
+          <button data-s="inspecting">查房中</button>
+          <button data-s="cleaning">清扫中</button>
+          <button data-s="dirty">待清扫</button>
+          <button data-s="blocked">维修</button>
+          <button data-s="occupied">在住</button>
+        </div>
+        <div class="spacer" style="flex:1"></div>
+        <div class="legend" id="legend"></div>
+        <button class="btn ghost small" id="refresh-board">刷新</button>
+      </div>
+      <div id="board"></div>
+    </section>
+
+    <!-- 入住 -->
+    <section class="view" id="view-checkin">
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>入住办理</h3><span class="sub">先校验房态，再确认开房</span></div>
+          <div class="panel-body">
+            <div class="inline-form" style="margin-bottom:16px">
+              <div class="field" style="width:150px"><label>房号</label><input id="ci-room" placeholder="如 803" maxlength="6"></div>
+              <button class="btn ghost" id="ci-check">校验房态</button>
+            </div>
+            <div id="gate-result">
+              <div class="empty">输入房号后校验：只有「可售」才能开房，其余状态会被闸门拦下并给出替代房。</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>可售库存</h3><span class="sub">只统计查房通过的房间</span></div>
+          <div class="panel-body" id="available-list"><div class="empty">加载中…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 待办 -->
+    <section class="view" id="view-tasks">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>待办队列</h3>
+          <span class="sub">查房任务超时会在交接摘要中置顶</span>
+          <div class="spacer"></div>
+          <div class="seg" id="task-filter">
+            <button class="active" data-s="open,doing">进行中</button>
+            <button data-s="done">已完成</button>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:0 16px 8px"><div id="task-table"></div></div>
+      </div>
+    </section>
+
+    <!-- 交接班 -->
+    <section class="view" id="view-handover">
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>交接单</h3><span class="sub">系统按当前房态生成草稿，你补充人工说明</span></div>
+          <div class="panel-body">
+            <div class="field"><label>班次</label>
+              <select id="h-shift"><option>早班</option><option>中班</option><option>晚班</option></select>
+            </div>
+            <div class="field"><label>当班摘要（自动生成，可编辑）</label>
+              <textarea id="h-summary" rows="5"></textarea></div>
+            <div class="field"><label>遗留问题与风险提示</label>
+              <textarea id="h-issues" rows="3" placeholder="如：803 客人 14:00 到店需优先查房；906 空调待修"></textarea></div>
+            <button class="btn" id="h-submit">提交交接单</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>未完成事项</h3><span class="sub" id="h-meta"></span></div>
+          <div class="panel-body" id="h-draft"><div class="empty">加载中…</div></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-head"><h3>历史交接单</h3></div>
+        <div class="panel-body" style="padding:0 16px 8px"><div id="h-history"></div></div>
+      </div>
+    </section>
+
+    <!-- 助手 -->
+    <section class="view" id="view-agent">
+      <div class="panel chat">
+        <div class="panel-head">
+          <h3>值班助手</h3>
+          <span class="sub" id="agent-sub">查房态、查口径、发起待确认动作</span>
+          <div class="spacer"></div>
+          <button class="btn ghost small" id="agent-reset">新会话</button>
+        </div>
+        <div class="chat-body" id="chat-body"></div>
+        <div class="quick" id="quick">
+          <button>803 能入住吗</button>
+          <button>本周拦截几次</button>
+          <button>还有大床房吗</button>
+          <button>交接班要注意什么</button>
+          <button>已清扫能不能办入住</button>
+        </div>
+        <form class="chat-input" id="chat-form">
+          <input id="chat-text" placeholder="问点什么，比如「803 能入住吗」" autocomplete="off">
+          <button class="btn" type="submit" id="chat-send">发送</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 房间抽屉 -->
+<div class="drawer-mask" id="drawer-mask"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="title"><b id="d-no">—</b><span id="d-badge"></span><button class="close" id="d-close">×</button></div>
+    <div class="hint" id="d-sub" style="margin-top:6px"></div>
+  </div>
+  <div class="drawer-body" id="d-body"></div>
+  <div class="drawer-foot"><div class="actions-row" id="d-actions"></div></div>
+</aside>
+
+<!-- 通用弹窗 -->
+<div class="modal-mask" id="modal-mask">
+  <div class="modal">
+    <div class="modal-head" id="m-title">操作</div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="modal-foot"><button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-ok">确认</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="/static/common.js"></script>
+<script src="/static/staff.js"></script>
+</body>
+</html>
