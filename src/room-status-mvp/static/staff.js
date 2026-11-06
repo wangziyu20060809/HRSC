@@ -371,7 +371,7 @@
       const modeText = { llm: '模型 + 工具', guarded: '依据校验后改用规则答案', fallback: '规则模式' }[d.mode] || d.mode;
       let meta = `<span class="mode-badge ${d.mode}">${modeText}</span><span>${d.latency_ms} ms</span>`;
       if (d.trace && d.trace.length) {
-        meta += `<div class="trace">${d.trace.map((t) => `<span class="trace-chip ${t.write ? 'write' : ''}">${esc(t.tool)} · ${esc(t.brief)}</span>`).join('')}</div>`;
+        meta += `<div class="trace">${d.trace.map((t) => `<span class="trace-chip ${t.write ? 'write' : ''}" title="${esc(t.brief)}">${esc(t.tool)} · ${esc(String(t.brief || '').slice(0, 34))}${String(t.brief || '').length > 34 ? '…' : ''}</span>`).join('')}</div>`;
       }
       const node = addMsg('bot', esc(d.answer).replace(/\n/g, '<br>'), meta);
       if (d.citations && d.citations.length) {

@@ -23,11 +23,21 @@ CODES: dict[int, str] = {
 }
 
 
+def status_for(code: int) -> int:
+    """错误码前三位即 HTTP 状态（40001→400 / 40301→403 / 40901→409 / 50001→500）。
+
+    这样调用方只需按错误码判语义，HTTP 状态码与码族始终一致；
+    此前 40301 走默认值 400，导致「越权」与「参数错」在状态码上无法区分。
+    """
+    derived = code // 100
+    return derived if 400 <= derived <= 599 else 400
+
+
 class ApiError(Exception):
-    def __init__(self, code: int, message: str = "", status: int = 400, detail: str = ""):
+    def __init__(self, code: int, message: str = "", status: int | None = None, detail: str = ""):
         self.code = code
         self.message = message or CODES.get(code, "请求失败")
-        self.status = status
+        self.status = status if status is not None else status_for(code)
         self.detail = detail or None
         super().__init__(self.message)
 

@@ -1,0 +1,12 @@
+[
+ {
+  "out": "04-db-locked.png",
+  "origin": "http://127.0.0.1:8102",
+  "url": "/staff",
+  "cookie": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwidXNlcm5hbWUiOiJmcm9udCIsImRpc3BsYXkiOiJcdTY3OTdcdTRlYTZcdTgyMWYiLCJyb2xlIjoiZnJvbnQiLCJwb3N0IjoiXHU1MjRkXHU1M2YwIiwiaWF0IjoxNzkzOTMzNzE5LCJleHAiOjE3OTM5Njk3MTl9.ZknoXL7wuck5Lm50-Yj52RD6r1oLcnSl7GvlcQ8zs4Q",
+  "load": 1500,
+  "js": "window.__ev('故障 ③：数据库被外部事务独占锁定时，写房态的表现（读仍可用）',[ {label:'读房态（仍可用）', req:'GET /api/rooms/1103', fetch:{url:'/api/rooms/1103', pick:['room']}}, {label:'写房态（被锁阻塞，10 秒超时后失败）', req:'POST /api/rooms/1103/transition  block', fetch:{url:'/api/rooms/1103/transition', method:'POST', body:{action:'block', reason:'写锁故障注入'}}} ])",
+  "wait": 16000,
+  "height": 680
+ }
+]

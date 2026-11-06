@@ -43,18 +43,24 @@ for r in (auth_api.router, rooms.router, tasks.router, handover.router,
 # ---------------------------------------------------------------------
 # 页面
 # ---------------------------------------------------------------------
+def _go(path: str, request: Request) -> RedirectResponse:
+    """跳转时保留查询串：云托管要求分享码等参数在跳转中不丢失"""
+    q = request.url.query
+    return RedirectResponse(path + (("?" + q) if q else ""))
+
+
 @app.get("/")
 def index(request: Request):
     user = security.current_user(request)
     if not user:
-        return RedirectResponse("/login")
-    return RedirectResponse("/admin" if user["role"] == "admin" else "/staff")
+        return _go("/login", request)
+    return _go("/admin" if user["role"] == "admin" else "/staff", request)
 
 
 @app.get("/login")
 def login_page(request: Request):
     if security.current_user(request):
-        return RedirectResponse("/")
+        return _go("/", request)
     return templates.TemplateResponse(request, "login.html", {"hotel": config.HOTEL_NAME})
 
 
@@ -62,9 +68,9 @@ def login_page(request: Request):
 def staff_page(request: Request):
     user = security.current_user(request)
     if not user:
-        return RedirectResponse("/login")
+        return _go("/login", request)
     if user["role"] == "admin":
-        return RedirectResponse("/admin")
+        return _go("/admin", request)
     return templates.TemplateResponse(request, "staff.html", {"user": user, "hotel": config.HOTEL_NAME})
 
 
@@ -72,9 +78,9 @@ def staff_page(request: Request):
 def admin_page(request: Request):
     user = security.current_user(request)
     if not user:
-        return RedirectResponse("/login")
+        return _go("/login", request)
     if user["role"] != "admin":
-        return RedirectResponse("/staff")
+        return _go("/staff", request)
     return templates.TemplateResponse(request, "admin.html", {"user": user, "hotel": config.HOTEL_NAME})
 
 

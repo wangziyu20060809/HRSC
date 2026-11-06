@@ -1,0 +1,99 @@
+[
+  {
+    "out": "01-login.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/login",
+    "login": null,
+    "wait": 1200,
+    "height": 760
+  },
+  {
+    "out": "02-board.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 2200,
+    "wait": 800,
+    "height": 1180
+  },
+  {
+    "out": "03-gate-block.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 1600,
+    "js": "(function(){document.querySelector('[data-view=checkin]').click();setTimeout(function(){document.getElementById('ci-room').value='1002';document.getElementById('ci-check').click();},400);return 'gate';})()",
+    "wait": 2400,
+    "height": 820
+  },
+  {
+    "out": "04-drawer-clean.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["qa", "Qa@123"],
+    "load": 1800,
+    "js": "(function(){var c=document.querySelector('.room[data-no=\"1002\"]');if(c)c.click();return c?c.dataset.no:'none';})()",
+    "wait": 2000,
+    "height": 900
+  },
+  {
+    "out": "05-start-inspection.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["qa", "Qa@123"],
+    "load": 1600,
+    "js": "(function(){var c=document.querySelector('.room[data-no=\"1002\"]');if(c)c.click();setTimeout(function(){var b=document.querySelector('[data-act=\"start_inspection\"]');if(b)b.click();},900);return 'start';})()",
+    "wait": 2600,
+    "height": 900
+  },
+  {
+    "out": "06-checklist-modal.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["qa", "Qa@123"],
+    "load": 1600,
+    "js": "(function(){var c=document.querySelector('.room[data-no=\"1002\"]');if(c)c.click();setTimeout(function(){var b=document.querySelector('[data-act=\"pass_inspection\"]');if(b)b.click();},900);return 'modal';})()",
+    "wait": 2200,
+    "height": 900
+  },
+  {
+    "out": "07-passed.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["qa", "Qa@123"],
+    "load": 1600,
+    "js": "(function(){var c=document.querySelector('.room[data-no=\"1002\"]');if(c)c.click();setTimeout(function(){var b=document.querySelector('[data-act=\"pass_inspection\"]');if(b)b.click();setTimeout(function(){document.querySelectorAll('#ck-list input').forEach(function(i){i.checked=true;});var ok=document.getElementById('m-ok');if(ok)ok.click();},500);},800);return 'pass';})()",
+    "wait": 3200,
+    "height": 900
+  },
+  {
+    "out": "08-gate-ok.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 1600,
+    "js": "(function(){document.querySelector('[data-view=checkin]').click();setTimeout(function(){document.getElementById('ci-room').value='1002';document.getElementById('ci-check').click();},400);return 'gate-ok';})()",
+    "wait": 2400,
+    "height": 820
+  },
+  {
+    "out": "09-checked-in.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 1600,
+    "js": "(function(){document.querySelector('[data-view=checkin]').click();setTimeout(function(){document.getElementById('ci-room').value='1002';document.getElementById('ci-check').click();setTimeout(function(){var n=document.getElementById('ci-name');if(n){n.value='张伟';var c=document.getElementById('ci-confirm');if(c)c.click();}},900);},400);return 'checkin';})()",
+    "wait": 3200,
+    "height": 820
+  },
+  {
+    "out": "10-agent.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 1600,
+    "js": "(function(){document.querySelector('[data-view=agent]').click();setTimeout(function(){var i=document.getElementById('chat-text');if(i){i.value='1002 现在能入住吗？';document.getElementById('chat-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));}},500);return 'ask';})()",
+    "wait": 8000,
+    "height": 1000
+  }
+]

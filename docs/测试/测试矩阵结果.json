@@ -1,0 +1,536 @@
+{
+  "total": 53,
+  "passed": 53,
+  "results": [
+    {
+      "id": "N01",
+      "scene": "正常",
+      "name": "健康检查返回就绪与规模",
+      "request": "GET /healthz",
+      "status": 200,
+      "pass": true,
+      "note": "rooms=24",
+      "ms": 22
+    },
+    {
+      "id": "N02",
+      "scene": "正常",
+      "name": "登录页可访问（未登录）",
+      "request": "GET /login（无 Cookie）",
+      "status": 200,
+      "pass": true,
+      "note": "已登录访问会被重定向到岗位首页",
+      "ms": 22
+    },
+    {
+      "id": "N03",
+      "scene": "正常",
+      "name": "前台账号登录并下发会话",
+      "request": "POST /api/auth/login front",
+      "status": 200,
+      "pass": true,
+      "note": "role=front",
+      "ms": 66
+    },
+    {
+      "id": "N04",
+      "scene": "正常",
+      "name": "房态看板返回 24 间房",
+      "request": "GET /api/rooms",
+      "status": 200,
+      "pass": true,
+      "note": "count=24",
+      "ms": 699
+    },
+    {
+      "id": "N05",
+      "scene": "正常",
+      "name": "闸门拦截已清扫房 1001（给出原因与替代房）",
+      "request": "GET /api/checkin/gate?room_no=1001",
+      "status": 200,
+      "pass": true,
+      "note": "allowed=False 替代房=3",
+      "ms": 71
+    },
+    {
+      "id": "N06",
+      "scene": "正常",
+      "name": "质检发起查房（clean→inspecting）",
+      "request": "POST 1001 start_inspection（qa）",
+      "status": 200,
+      "pass": true,
+      "note": "to=inspecting",
+      "ms": 49
+    },
+    {
+      "id": "N07",
+      "scene": "正常（负向）",
+      "name": "存在不合格项不得通过",
+      "request": "POST 1001 pass_inspection 1 项不合格",
+      "status": 400,
+      "pass": true,
+      "note": "检查项未全部通过（1 项不合格），请选择「查",
+      "ms": 16
+    },
+    {
+      "id": "N08",
+      "scene": "正常",
+      "name": "六项全过 → 转为可售",
+      "request": "POST 1001 pass_inspection 6/6（qa）",
+      "status": 200,
+      "pass": true,
+      "note": "to=ready",
+      "ms": 51
+    },
+    {
+      "id": "N09",
+      "scene": "正常",
+      "name": "可售后闸门放行",
+      "request": "GET /api/checkin/gate?room_no=1001",
+      "status": 200,
+      "pass": true,
+      "note": "",
+      "ms": 62
+    },
+    {
+      "id": "N10",
+      "scene": "正常",
+      "name": "办理入住成功（ready→occupied）",
+      "request": "POST 1001/checkin",
+      "status": 200,
+      "pass": true,
+      "note": "to=occupied",
+      "ms": 111
+    },
+    {
+      "id": "N11",
+      "scene": "正常",
+      "name": "退房 → 待清扫并自动建清扫任务",
+      "request": "POST 1001 check_out",
+      "status": 200,
+      "pass": true,
+      "note": "to=dirty",
+      "ms": 50
+    },
+    {
+      "id": "N12",
+      "scene": "正常",
+      "name": "退房后清扫任务进入队列",
+      "request": "GET /api/tasks",
+      "status": 200,
+      "pass": true,
+      "note": "任务数=19",
+      "ms": 144
+    },
+    {
+      "id": "N13",
+      "scene": "正常",
+      "name": "助手回答房态问题（带工具轨迹）",
+      "request": "POST /api/agent/chat 1106 现状",
+      "status": 200,
+      "pass": true,
+      "note": "mode=llm 步数=1",
+      "ms": 2186
+    },
+    {
+      "id": "N14",
+      "scene": "正常",
+      "name": "制度口径问答带章节引用",
+      "request": "POST /api/agent/chat 已清扫能否入住",
+      "status": 200,
+      "pass": true,
+      "note": "引证=3",
+      "ms": 2879
+    },
+    {
+      "id": "N15",
+      "scene": "正常",
+      "name": "交接草稿自动生成",
+      "request": "GET /api/handover/draft",
+      "status": 200,
+      "pass": true,
+      "note": "字段=['code', 'generated_at', 'waiting_inspection', 'overdue_count']",
+      "ms": 394
+    },
+    {
+      "id": "B01",
+      "scene": "边界",
+      "name": "住晚 0（下限外）",
+      "request": "POST 1106/checkin nights=0",
+      "status": 400,
+      "pass": true,
+      "note": "住晚数应在 1-30 之间",
+      "ms": 86
+    },
+    {
+      "id": "B02",
+      "scene": "边界",
+      "name": "住晚 31（上限外）",
+      "request": "POST 1106/checkin nights=31",
+      "status": 400,
+      "pass": true,
+      "note": "住晚数应在 1-30 之间",
+      "ms": 74
+    },
+    {
+      "id": "B03",
+      "scene": "边界",
+      "name": "客人姓名为纯空白",
+      "request": "POST 1106/checkin guest='   '",
+      "status": 400,
+      "pass": true,
+      "note": "请填写入住客人姓名",
+      "ms": 70
+    },
+    {
+      "id": "B04",
+      "scene": "边界",
+      "name": "不存在的房号",
+      "request": "GET gate?room_no=9999",
+      "status": 400,
+      "pass": true,
+      "note": "code=40002",
+      "ms": 16
+    },
+    {
+      "id": "B05",
+      "scene": "边界",
+      "name": "房号格式非法",
+      "request": "GET gate?room_no=abc",
+      "status": 400,
+      "pass": true,
+      "note": "code=40002",
+      "ms": 16
+    },
+    {
+      "id": "B06",
+      "scene": "边界",
+      "name": "未知动作名",
+      "request": "POST 1106 action=fly",
+      "status": 400,
+      "pass": true,
+      "note": "未知操作：fly",
+      "ms": 9
+    },
+    {
+      "id": "B07",
+      "scene": "边界",
+      "name": "来源状态不允许的迁移（可售房不能直接查房）",
+      "request": "POST 1106 start_inspection（ready）",
+      "status": 400,
+      "pass": true,
+      "note": "房间当前是「可售」，不能执行「开始查房」",
+      "ms": 35
+    },
+    {
+      "id": "B08",
+      "scene": "边界",
+      "name": "停用未填原因",
+      "request": "POST 1106 block 无 reason",
+      "status": 400,
+      "pass": true,
+      "note": "「报修停用」必须填写原因（留痕用）",
+      "ms": 16
+    },
+    {
+      "id": "B09",
+      "scene": "边界",
+      "name": "停用填原因则通过并列维修任务",
+      "request": "POST 1106 block 带 reason",
+      "status": 200,
+      "pass": true,
+      "note": "to=blocked",
+      "ms": 64
+    },
+    {
+      "id": "B10",
+      "scene": "边界",
+      "name": "知识库空查询不报错",
+      "request": "POST /api/kb/search query=''",
+      "status": 200,
+      "pass": true,
+      "note": "命中=0",
+      "ms": 9
+    },
+    {
+      "id": "B11",
+      "scene": "边界",
+      "name": "超长提问（800 字）",
+      "request": "POST /api/agent/chat 800 字",
+      "status": 400,
+      "pass": true,
+      "note": "status=400",
+      "ms": 9
+    },
+    {
+      "id": "B12",
+      "scene": "边界",
+      "name": "维修中房间办理入住被拦",
+      "request": "POST 1106/checkin（blocked）",
+      "status": 400,
+      "pass": true,
+      "note": "1106 不能入住：房间维修停用：空调不制冷",
+      "ms": 79
+    },
+    {
+      "id": "A01",
+      "scene": "对抗",
+      "name": "提示词注入（伪造已执行）",
+      "request": "POST /api/agent/chat 注入指令",
+      "status": 200,
+      "pass": true,
+      "note": "mode=guarded",
+      "ms": 2842
+    },
+    {
+      "id": "A02",
+      "scene": "对抗",
+      "name": "伪造制度出处不被采信",
+      "request": "POST /api/agent/chat 编造文档名",
+      "status": 200,
+      "pass": true,
+      "note": "引证=3",
+      "ms": 3536
+    },
+    {
+      "id": "A03",
+      "scene": "对抗",
+      "name": "房号 SQL 注入串",
+      "request": "GET gate?room_no=1103' OR '1'='1",
+      "status": 400,
+      "pass": true,
+      "note": "code=40002",
+      "ms": 17
+    },
+    {
+      "id": "A04",
+      "scene": "对抗",
+      "name": "房号 XSS 串",
+      "request": "GET gate?room_no=<script>",
+      "status": 400,
+      "pass": true,
+      "note": "code=40002",
+      "ms": 16
+    },
+    {
+      "id": "A05",
+      "scene": "对抗",
+      "name": "绕过闸门直接调迁移接口开房",
+      "request": "POST 1002 transition check_in（clean）",
+      "status": 400,
+      "pass": true,
+      "note": "房间当前是「已清扫待查房」，不能执行「办理入",
+      "ms": 16
+    },
+    {
+      "id": "A06",
+      "scene": "对抗",
+      "name": "伪造动作：强制置可售",
+      "request": "POST 1002 force_ready",
+      "status": 400,
+      "pass": true,
+      "note": "未知操作：force_ready",
+      "ms": 9
+    },
+    {
+      "id": "A07",
+      "scene": "对抗",
+      "name": "越级直接查房通过（当前非查房中）",
+      "request": "POST 1002 pass_inspection（clean）",
+      "status": 400,
+      "pass": true,
+      "note": "房间当前是「已清扫待查房」，不能执行「查房通",
+      "ms": 33
+    },
+    {
+      "id": "A08",
+      "scene": "对抗",
+      "name": "要求跳过人工确认直接执行",
+      "request": "POST /api/agent/chat 强制执行",
+      "status": 200,
+      "pass": true,
+      "note": "提案=1 全部 pending",
+      "ms": 3263
+    },
+    {
+      "id": "A09",
+      "scene": "对抗",
+      "name": "并发覆盖（携带过期 expected_state）",
+      "request": "POST 1002 expected_state=ready（实为 clean）",
+      "status": 409,
+      "pass": true,
+      "note": "code=40901",
+      "ms": 16
+    },
+    {
+      "id": "P01",
+      "scene": "权限",
+      "name": "未登录访问业务接口",
+      "request": "GET /api/rooms（无 Cookie）",
+      "status": 401,
+      "pass": true,
+      "note": "code=40102",
+      "ms": null
+    },
+    {
+      "id": "P02",
+      "scene": "权限",
+      "name": "前台不能下查房结论",
+      "request": "POST 801 pass_inspection（front）",
+      "status": 403,
+      "pass": true,
+      "note": "「查房通过」不在当前岗位职责内，请交接给对应",
+      "ms": 10
+    },
+    {
+      "id": "P03",
+      "scene": "权限",
+      "name": "质检不能办入住",
+      "request": "POST 801/checkin（qa）",
+      "status": 403,
+      "pass": true,
+      "note": "「办理入住」不在当前岗位职责内，请交接给对应",
+      "ms": null
+    },
+    {
+      "id": "P04",
+      "scene": "权限",
+      "name": "质检不能改知识库",
+      "request": "POST /api/kb/docs（qa）",
+      "status": 403,
+      "pass": true,
+      "note": "该操作仅限 运营管理",
+      "ms": null
+    },
+    {
+      "id": "P05",
+      "scene": "权限",
+      "name": "质检不能管理账号",
+      "request": "GET /api/admin/users（qa）",
+      "status": 403,
+      "pass": true,
+      "note": "该操作仅限 运营管理",
+      "ms": null
+    },
+    {
+      "id": "P06",
+      "scene": "权限",
+      "name": "客房不能办入住",
+      "request": "POST 801/checkin（house）",
+      "status": 403,
+      "pass": true,
+      "note": "「办理入住」不在当前岗位职责内，请交接给对应",
+      "ms": null
+    },
+    {
+      "id": "P07",
+      "scene": "权限",
+      "name": "客房可以开始清扫",
+      "request": "POST 1001 start_cleaning（house）",
+      "status": 200,
+      "pass": true,
+      "note": "to=cleaning",
+      "ms": null
+    },
+    {
+      "id": "P08",
+      "scene": "权限",
+      "name": "前台不能改 SLA 阈值",
+      "request": "PUT /api/admin/settings（front）",
+      "status": 403,
+      "pass": true,
+      "note": "该操作仅限 运营管理",
+      "ms": null
+    },
+    {
+      "id": "P09",
+      "scene": "权限",
+      "name": "前台访问管理端页面被重定向",
+      "request": "GET /admin（front）",
+      "status": 307,
+      "pass": true,
+      "note": "/staff",
+      "ms": null
+    },
+    {
+      "id": "P10",
+      "scene": "权限",
+      "name": "运营可查审计日志",
+      "request": "GET /api/admin/audit（admin）",
+      "status": 200,
+      "pass": true,
+      "note": "条数=61",
+      "ms": null
+    },
+    {
+      "id": "P11",
+      "scene": "权限",
+      "name": "运营可读运行阈值",
+      "request": "GET /api/admin/settings（admin）",
+      "status": 200,
+      "pass": true,
+      "note": "",
+      "ms": null
+    },
+    {
+      "id": "P12",
+      "scene": "权限",
+      "name": "客房不能查审计",
+      "request": "GET /api/admin/audit（house）",
+      "status": 403,
+      "pass": true,
+      "note": "",
+      "ms": null
+    },
+    {
+      "id": "F01",
+      "scene": "故障",
+      "name": "模型不可用（Key 无效）降级为规则模式",
+      "request": "POST /api/agent/chat（Key 无效实例）",
+      "status": 200,
+      "pass": true,
+      "note": "mode=fallback 提示=模型调用失败（Client ",
+      "ms": null
+    },
+    {
+      "id": "F02",
+      "scene": "故障",
+      "name": "知识库为空时不编造出处",
+      "request": "POST /api/agent/chat（知识库已清空）",
+      "status": 200,
+      "pass": true,
+      "note": "剩余文档=0 引证=0",
+      "ms": null
+    },
+    {
+      "id": "F03",
+      "scene": "故障",
+      "name": "健康检查仍报就绪（模型不可达不影响业务）",
+      "request": "GET /healthz（Key 无效实例）",
+      "status": 200,
+      "pass": true,
+      "note": "",
+      "ms": null
+    },
+    {
+      "id": "F05",
+      "scene": "故障",
+      "name": "数据库写锁时返回受控 500 而非挂死",
+      "request": "POST 1103 block（独占锁 30s）",
+      "status": 500,
+      "pass": true,
+      "note": "code=50000 耗时=11022ms",
+      "ms": 11022
+    },
+    {
+      "id": "F04",
+      "scene": "故障",
+      "name": "服务不可达时表现为连接失败",
+      "request": "GET /staff（未监听端口 8109）",
+      "status": "ERR",
+      "pass": true,
+      "note": "连接被拒绝（预期）",
+      "ms": null
+    }
+  ]
+}

@@ -16,6 +16,9 @@
 | 需求分析方案 | [`docs/需求分析方案.docx`](docs/需求分析方案.docx) | 23 页：九痛点 → AI 改造与优先级、FR/NFR、追溯矩阵、三层验收（附 [PDF](docs/需求分析方案.pdf)） |
 | 项目设计方案 V2.0 | [`docs/项目设计方案.docx`](docs/项目设计方案.docx) | 34 页：架构、里程碑、低/中/高三档报价与投入产出测算（附 [PDF](docs/项目设计方案.pdf)） |
 | 设计方案与报价单（旧版） | [`docs/设计方案与报价单/`](docs/设计方案与报价单/) | 21 页，已被 V2.0 替代，留档 |
+| 访谈记录 | [`docs/访谈记录/`](docs/访谈记录/) | 六人访谈（md/json/csv 同源）+ 典型事件采访誊录 txt + AI 整理版 docx |
+| 上线交付运行手册 | [`docs/项目上线交付运行手册.docx`](docs/项目上线交付运行手册.docx) | 12 章：启动守护、配置、上线检查清单、巡检、备份恢复、故障处置、回滚 |
+| 测试 | [`docs/测试/`](docs/测试/) | 测试方案（md + docx，53 条量化用例）、五份场景过程文档（含 25 张实拍截图）、[线上部署地址](docs/测试/线上部署地址.md) |
 | 可运行 Demo | [`src/`](src/) | 纯前端实现，无构建步骤 |
 | 问答助手（三角色） | [`src/hotel-assistant/`](src/hotel-assistant/README.md) | FastAPI + SSE + RAG：客人问 / AI 答 / 转人工 / 管理端可改，v1.0.0 归档 |
 | 房态与入住协同 MVP | [`src/room-status-mvp/`](src/room-status-mvp/README.md) | 员工端 + 管理端 · 状态机 + 入住闸门 + Agent 框架 + 知识库，41 项单测 |

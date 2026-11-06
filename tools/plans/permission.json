@@ -1,0 +1,52 @@
+[
+  {
+    "out": "01-unauthenticated.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/login",
+    "login": null,
+    "load": 1200,
+    "js": "fetch('/api/auth/logout',{method:'POST',credentials:'include'}).then(function(){window.__ev('权限 ①：未登录直接调用业务接口',[ {label:'房态列表', req:'GET /api/rooms', fetch:{url:'/api/rooms'}}, {label:'助手对话', req:'POST /api/agent/chat', fetch:{url:'/api/agent/chat', method:'POST', body:{message:'1103 能入住吗'}}}, {label:'管理端账号', req:'GET /api/admin/users', fetch:{url:'/api/admin/users'}} ])})",
+    "wait": 2600,
+    "height": 620
+  },
+  {
+    "out": "02-front-cannot-inspect.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 1200,
+    "js": "window.__ev('权限 ②：前台不能下查房结论、不能改可售',[ {label:'查房通过', req:'POST /api/rooms/1103/transition  pass_inspection', fetch:{url:'/api/rooms/1103/transition', method:'POST', body:{action:'pass_inspection', checklist:{bed:true,bath:true,floor:true,amenity:true,device:true,smell:true}}}}, {label:'提交已清扫', req:'POST /api/rooms/1103/transition  finish_cleaning', fetch:{url:'/api/rooms/1103/transition', method:'POST', body:{action:'finish_cleaning'}}}, {label:'管理端账号', req:'GET /api/admin/users', fetch:{url:'/api/admin/users'}} ])",
+    "wait": 2000,
+    "height": 620
+  },
+  {
+    "out": "03-qa-cannot-checkin.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["qa", "Qa@123"],
+    "load": 1200,
+    "js": "window.__ev('权限 ③：质检不能办入住、不能改知识库',[ {label:'办入住', req:'POST /api/rooms/1103/checkin', fetch:{url:'/api/rooms/1103/checkin', method:'POST', body:{guest_name:'权限测试', nights:1}}}, {label:'写知识库', req:'POST /api/kb/docs', fetch:{url:'/api/kb/docs', method:'POST', body:{title:'权限测试文档', body:'仅用于权限校验', category:'制度'}}}, {label:'改设置', req:'PUT /api/admin/settings', fetch:{url:'/api/admin/settings', method:'PUT', body:{sla_clean_wait_min:30}}} ])",
+    "wait": 2000,
+    "height": 620
+  },
+  {
+    "out": "04-house-scope.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/staff",
+    "login": ["house", "House@123"],
+    "load": 1200,
+    "js": "window.__ev('权限 ④：客房能报修与清扫，不能查房与入住',[ {label:'开始清扫（允许）', req:'GET /api/rooms/801', fetch:{url:'/api/rooms/801', pick:['room','gate']}}, {label:'查房通过', req:'POST /api/rooms/1103/transition  pass_inspection', fetch:{url:'/api/rooms/1103/transition', method:'POST', body:{action:'pass_inspection', checklist:{bed:true,bath:true,floor:true,amenity:true,device:true,smell:true}}}}, {label:'办入住', req:'POST /api/rooms/1103/checkin', fetch:{url:'/api/rooms/1103/checkin', method:'POST', body:{guest_name:'权限测试', nights:1}}} ])",
+    "wait": 2000,
+    "height": 900
+  },
+  {
+    "out": "05-page-redirect.png",
+    "origin": "http://127.0.0.1:8101",
+    "url": "/admin",
+    "login": ["front", "Front@123"],
+    "load": 2000,
+    "js": "(function(){var u=location.pathname;document.body.setAttribute('data-final-url',u);return u;})()",
+    "wait": 800,
+    "height": 820
+  }
+]

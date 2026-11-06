@@ -1,0 +1,32 @@
+[
+  {
+    "out": "01-model-down.png",
+    "origin": "http://127.0.0.1:8102",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 1600,
+    "js": "(function(){document.querySelector('[data-view=agent]').click();setTimeout(function(){var i=document.getElementById('chat-text');i.value='1103 能入住吗';document.getElementById('chat-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));},500);return 'ask';})()",
+    "wait": 12000,
+    "height": 900
+  },
+  {
+    "out": "02-kb-empty.png",
+    "origin": "http://127.0.0.1:8102",
+    "url": "/staff",
+    "login": ["admin", "Admin@123"],
+    "load": 1200,
+    "js": "(async function(){var r=await fetch('/api/kb/docs',{credentials:'include'});var d=await r.json();var before=d.stats.docs;var ids=d.docs.map(function(x){return x.id;});for(var i=0;i<ids.length;i++){await fetch('/api/kb/docs/'+ids[i],{method:'DELETE',credentials:'include'});}return await __ev('故障 ②：知识库被清空后的检索行为',[ {label:'清空前文档数', req:'GET /api/kb/docs', status:'200', body:'docs = '+before+' 篇'}, {label:'删除全部文档', req:'DELETE /api/kb/docs/{id} × '+ids.length, status:'200', body:'逐篇删除成功'}, {label:'检索测试', req:'POST /api/kb/search  q=已清扫能不能办入住', fetch:{url:'/api/kb/search',method:'POST',body:{query:'已清扫能不能办入住'}}}, {label:'清空后文档数', req:'GET /api/kb/docs', fetch:{url:'/api/kb/docs',pick:['stats','docs']}} ]);})()",
+    "wait": 2600,
+    "height": 760
+  },
+  {
+    "out": "03-kb-empty-answer.png",
+    "origin": "http://127.0.0.1:8102",
+    "url": "/staff",
+    "login": ["front", "Front@123"],
+    "load": 1600,
+    "js": "(function(){document.querySelector('[data-view=agent]').click();setTimeout(function(){var i=document.getElementById('chat-text');i.value='已清扫能不能办入住？依据是哪一条制度？';document.getElementById('chat-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));},500);return 'ask-kb';})()",
+    "wait": 12000,
+    "height": 900
+  }
+]
