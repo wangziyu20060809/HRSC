@@ -52,7 +52,7 @@ python seed.py && python ingest.py
 python -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-三端入口：客人端 `/guest`（填房号免登录）、员工端 `/staff`（`staff` / `Staff@123`）、管理端 `/admin`（`admin` / `Admin@123`）。完整验收路径见 [该目录 README](src/hotel-assistant/README.md)。
+三端入口：客人端 `/guest`（填房号免登录）、员工端 `/staff`（`staff` / `123456`）、管理端 `/admin`（`admin` / `123456`）。完整验收路径见 [该目录 README](src/hotel-assistant/README.md)。
 
 ### 跑起房态与入住协同 MVP
 
@@ -63,7 +63,7 @@ cp .env.example .env        # 可选：填 LLM_API_KEY 启用真模型，不填�
 python -m uvicorn app:app --host 127.0.0.1 --port 8100
 ```
 
-两个入口：员工端 `/staff`（`front` / `Front@123` 或 `qa` / `Qa@123`）、管理端 `/admin`（`admin` / `Admin@123`）。首次启动自动建库并写入 24 间房、近 7 天房态流水与 5 篇制度。架构与边界见 [docs/ARCHITECTURE.md](src/room-status-mvp/docs/ARCHITECTURE.md)。
+两个入口：员工端 `/staff`（`front` / `123456` 或 `qa` / `123456`）、管理端 `/admin`（`admin` / `123456`）。首次启动自动建库并写入 24 间房、近 7 天房态流水与 5 篇制度。架构与边界见 [docs/ARCHITECTURE.md](src/room-status-mvp/docs/ARCHITECTURE.md)。
 
 ## 目录结构
 

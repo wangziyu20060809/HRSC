@@ -30,10 +30,10 @@ import httpx
 RESULTS: list[dict] = []
 FULL = {k: True for k in ("bed", "bath", "floor", "amenity", "device", "smell")}
 CRED = {
-    "front": ("front", "Front@123"),
-    "qa": ("qa", "Qa@123"),
-    "house": ("house", "House@123"),
-    "admin": ("admin", "Admin@123"),
+    "front": ("front", "123456"),
+    "qa": ("qa", "123456"),
+    "house": ("house", "123456"),
+    "admin": ("admin", "123456"),
 }
 
 
@@ -150,7 +150,7 @@ def main():
     rec("N02", "正常", "登录页可访问（未登录）", "GET /login（无 Cookie）", r.status_code,
         r.status_code == 200, "已登录访问会被重定向到岗位首页", ms)
 
-    r, ms = call(front, "POST", "/api/auth/login", json={"username": "front", "password": "Front@123"})
+    r, ms = call(front, "POST", "/api/auth/login", json={"username": "front", "password": "123456"})
     u = jd(r).get("user") or {}
     rec("N03", "正常", "前台账号登录并下发会话", "POST /api/auth/login front", r.status_code,
         r.status_code == 200 and u.get("role") == "front", f"role={u.get('role')}", ms)
@@ -375,11 +375,11 @@ def main():
     # ---------------- 故障场景（第二实例：模型 Key 无效 + 知识库已清空） ----------------
     if args.base2:
         f2 = httpx.Client(base_url=args.base2, timeout=120.0, trust_env=False)
-        f2.post("/api/auth/login", json={"username": "front", "password": "Front@123"})
+        f2.post("/api/auth/login", json={"username": "front", "password": "123456"})
 
         # 故障前置：用运营账号通过接口清空知识库（走产品自身入口，确保索引缓存同步失效）
         adm2 = httpx.Client(base_url=args.base2, timeout=60.0, trust_env=False)
-        adm2.post("/api/auth/login", json={"username": "admin", "password": "Admin@123"})
+        adm2.post("/api/auth/login", json={"username": "admin", "password": "123456"})
         for doc in jd(adm2.get("/api/kb/docs")).get("docs", []):
             adm2.delete(f"/api/kb/docs/{doc['id']}")
         kb_left = len(jd(adm2.get("/api/kb/docs")).get("docs", []))

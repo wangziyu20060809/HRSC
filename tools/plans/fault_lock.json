@@ -5,7 +5,7 @@
     "url": "/staff",
     "login": [
       "admin",
-      "Admin@123"
+      "123456"
     ],
     "load": 1200,
     "js": "window.__ev('故障 ③：数据库被外部事务独占锁定时，写房态的表现（读仍可用）',[ {label:'读房态（仍可用）', req:'GET /api/rooms/1103', fetch:{url:'/api/rooms/1103', pick:['code','room']}}, {label:'写房态（被锁阻塞 10s 后失败）', req:'POST /api/rooms/1103/transition  block', fetch:{url:'/api/rooms/1103/transition', method:'POST', body:{action:'block', reason:'故障测试：数据库锁定时写入'}}} ])",
@@ -18,7 +18,7 @@
     "url": "/staff",
     "login": [
       "admin",
-      "Admin@123"
+      "123456"
     ],
     "load": 1200,
     "js": "(async function(){var b=await fetch('/api/rooms/1103/transition',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'block',reason:'故障测试：锁释放后重试'}),credentials:'include'});var bs=b.status;var u=await fetch('/api/rooms/1103/transition',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'unblock'}),credentials:'include'});return await __ev('故障 ③（续）：锁释放后重试同一请求即成功（随后恢复房态）',[ {label:'重试停用', req:'POST /api/rooms/1103/transition  block', status:String(bs), body:'成功：房态 → 维修中'}, {label:'恢复房态', req:'POST /api/rooms/1103/transition  unblock', fetch:{url:'/api/rooms/1103/transition',method:'POST',body:{action:'unblock'}}} ]);})()",

@@ -15,8 +15,8 @@ def main() -> None:
 
     # —— 种子账号（仅演示用途；生产部署务必修改口令并设置 JWT_SECRET）——
     seeds = [
-        ("admin", "系统管理员", "admin", "运营部", "Admin@123"),
-        ("staff", "值班员工", "staff", "前台", "Staff@123"),
+        ("admin", "系统管理员", "admin", "运营部", "123456"),
+        ("staff", "值班员工", "staff", "前台", "123456"),
     ]
     for username, display, role, post, password in seeds:
         if not db.get_user_by_username(username):
@@ -31,7 +31,7 @@ def main() -> None:
     if db.get_page_content() == db.DEFAULT_HOME_PAGE:
         print("[页面内容] 使用默认欢迎语与 FAQ（可在管理后台修改）")
 
-    print("\n完成。管理员 admin / Admin@123，员工 staff / Staff@123（演示口令，请尽快修改）")
+    print("\n完成。管理员 admin / 123456，员工 staff / 123456（演示口令，请尽快修改）")
 
 
 if __name__ == "__main__":

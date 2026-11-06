@@ -5,7 +5,7 @@
     "url": "/staff",
     "login": [
       "qa",
-      "Qa@123"
+      "123456"
     ],
     "load": 1800,
     "js": "(function(){var c=document.querySelector('.room[data-no=\"1103\"]');if(c)c.click();setTimeout(function(){var b=document.querySelector('[data-act=\"pass_inspection\"]');if(b)b.click();setTimeout(function(){var ins=document.querySelectorAll('#ck-list input');if(ins[0])ins[0].checked=true;if(ins[1])ins[1].checked=true;var ok=document.getElementById('m-ok');if(ok)ok.click();},600);},800);return 'partial';})()",
@@ -18,7 +18,7 @@
     "url": "/staff",
     "login": [
       "qa",
-      "Qa@123"
+      "123456"
     ],
     "load": 1200,
     "js": "window.__ev('边界 ①：状态不允许的迁移（已清扫房直接查房通过）',[ {label:'前置状态', req:'GET /api/rooms/1103', fetch:{url:'/api/rooms/1103'}, body:'取 state 字段'}, {label:'越级迁移', req:'POST /api/rooms/1103/transition  pass_inspection', fetch:{url:'/api/rooms/1103/transition', method:'POST', body:{action:'pass_inspection', checklist:{bed:true,bath:true,floor:true,amenity:true,device:true,smell:true}}}}, {label:'非法动作名', req:'POST /api/rooms/1103/transition  action=fly', fetch:{url:'/api/rooms/1103/transition', method:'POST', body:{action:'fly'}}} ])",
@@ -31,7 +31,7 @@
     "url": "/staff",
     "login": [
       "front",
-      "Front@123"
+      "123456"
     ],
     "load": 1200,
     "js": "window.__ev('边界 ②③：入住晚数与房号格式的参数边界',[ {label:'住晚=0（下限外）', req:'POST /api/rooms/801/checkin  nights=0', fetch:{url:'/api/rooms/801/checkin', method:'POST', body:{guest_name:'边界测试', nights:0}}}, {label:'住晚=31（上限外）', req:'POST /api/rooms/801/checkin  nights=31', fetch:{url:'/api/rooms/801/checkin', method:'POST', body:{guest_name:'边界测试', nights:31}}}, {label:'姓名为空白', req:'POST /api/rooms/801/checkin  guest_name=\"   \"', fetch:{url:'/api/rooms/801/checkin', method:'POST', body:{guest_name:'   ', nights:1}}}, {label:'房号不存在', req:'GET /api/checkin/gate?room_no=9999', fetch:{url:'/api/checkin/gate?room_no=9999'}}, {label:'房号格式非法', req:'GET /api/checkin/gate?room_no=abc', fetch:{url:'/api/checkin/gate?room_no=abc'}} ])",
@@ -44,7 +44,7 @@
     "url": "/staff",
     "login": [
       "admin",
-      "Admin@123"
+      "123456"
     ],
     "load": 1200,
     "js": "window.__ev('边界 ④：无任何可售房时，闸门只拒绝、不给替代房',[{label:'闸门（已清扫房）', req:'GET /api/checkin/gate?room_no=1103', fetch:{url:'/api/checkin/gate?room_no=1103', pick:['code','allowed','room_no','reason','owner','eta_min','alternatives']}},{label:'看板计数', req:'GET /api/dashboard', fetch:{url:'/api/dashboard', pick:['sellable','sellable_rate','counts']}}])",
@@ -57,7 +57,7 @@
     "url": "/staff",
     "login": [
       "front",
-      "Front@123"
+      "123456"
     ],
     "load": 1800,
     "js": "(function(){document.querySelector('[data-view=checkin]').click();setTimeout(function(){document.getElementById('ci-room').value='1103';document.getElementById('ci-check').click();},400);return 'gate-no-alt';})()",
@@ -70,7 +70,7 @@
     "url": "/staff",
     "login": [
       "admin",
-      "Admin@123"
+      "123456"
     ],
     "load": 1800,
     "js": "(async function(){var ready=['801','804','902','1001','1004','1106'];for(var i=0;i<ready.length;i++){await fetch('/api/rooms/'+ready[i]+'/transition',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'unblock'}),credentials:'include'});}return document.querySelectorAll('.room.sellable').length;})()",

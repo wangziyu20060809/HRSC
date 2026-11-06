@@ -1,6 +1,6 @@
 // 测试证据截图驱动：一次启动 Edge，按计划顺序执行步骤并截图
 // 用法：node tools/capture.js plans/xxx.json
-// 计划格式：[{ "out":"x.png", "origin":"http://127.0.0.1:8101", "login":["front","Front@123"],
+// 计划格式：[{ "out":"x.png", "origin":"http://127.0.0.1:8101", "login":["front","123456"],
 //             "url":"/staff", "js":"...", "wait":1500, "height":1000 }]
 const { spawn } = require('child_process');
 const fs = require('fs');
