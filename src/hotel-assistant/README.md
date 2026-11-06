@@ -5,7 +5,7 @@
 
 FastAPI 异步后端 + Jinja2 服务端渲染 + 原生 JS 前端，无构建步骤。检索层为 BM25 + FAISS 混合检索（RRF 融合），生成层为 OpenAI 兼容流式接口（默认千问 qwen-plus），会话、账号、知识库、提示词、页面文案全部落在 SQLite。未配置模型密钥时自动降级为「检索摘要模式」，功能链路完整可用。
 
-![客人端](screenshots/02-客人端.png)
+![客人端](screenshots/02-guest.png)
 
 ## 三角色与三端入口
 
