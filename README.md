@@ -14,6 +14,7 @@
 | 流程图 | [`docs/流程图/`](docs/流程图/) | 现状业务流程图 + 数智化转型后流程图（SVG/PNG 双格式） |
 | 设计方案与报价单 | [`docs/设计方案与报价单/`](docs/设计方案与报价单/) | 21 页 Word 正式版（附 PDF 预览），三档报价 |
 | 可运行 Demo | [`src/`](src/) | 纯前端实现，无构建步骤 |
+| 问答助手（三角色） | [`src/hotel-assistant/`](src/hotel-assistant/README.md) | FastAPI + SSE + RAG：客人问 / AI 答 / 转人工 / 管理端可改，v1.0.0 归档 |
 
 ## 快速开始
 
@@ -33,6 +34,18 @@ Demo 包含六个页面：项目总览、九阶段流程（每阶段带人工闸
 ```bash
 node tests/test_engine.js
 ```
+
+### 跑起问答助手（阶段 2 归档版）
+
+```bash
+cd src/hotel-assistant
+pip install -r requirements.txt
+cp .env.example .env        # 填模型密钥；不填则走检索摘要模式
+python seed.py && python ingest.py
+python -m uvicorn app:app --host 127.0.0.1 --port 8000
+```
+
+三端入口：客人端 `/guest`（填房号免登录）、员工端 `/staff`（`staff` / `Staff@123`）、管理端 `/admin`（`admin` / `Admin@123`）。完整验收路径见 [该目录 README](src/hotel-assistant/README.md)。
 
 ## 目录结构
 
@@ -60,6 +73,14 @@ HRSC/
 │   │   ├── stage1_rag_cli.py     # RAG：条款切500字→FAISS；BM25+向量 RRF 检索→LLM
 │   │   ├── data/                 # 示例制度文档
 │   │   └── requirements.txt
+│   ├── hotel-assistant/          # 阶段2 问答助手 v1.0.0（FastAPI + 三角色 + RAG）
+│   │   ├── app.py                # 路由与 SSE
+│   │   ├── auth.py / db.py       # JWT+RBAC / SQLite 数据层
+│   │   ├── chat_engine.py        # 检索→生成→落库→违规标记
+│   │   ├── templates/ static/    # 客人端、员工端、管理端六页
+│   │   ├── data/                 # 示例制度语料
+│   │   ├── screenshots/          # 界面快照
+│   │   └── README.md             # 三端入口、验收闭环、接口清单
 │   └── data/                     # 演示数据（房型/规则/九阶段课程）
 ├── tests/test_engine.js          # 业务核心单测（Node 原生运行）
 ├── examples/                     # 使用示例说明
@@ -72,7 +93,8 @@ HRSC/
 1. 先读 [行业分析](docs/行业分析.md) 了解问题定性与需求优先级；
 2. 再看 [流程图](docs/流程图/README.md) 对比现状与转型后流程；
 3. [设计方案与报价单](docs/设计方案与报价单/设计方案与报价单.docx) 是可签字的正式版本；
-4. 跑起 [Demo](src/index.html) 体验三态协同与人工闸门。
+4. 跑起 [Demo](src/index.html) 体验三态协同与人工闸门；
+5. 跑起 [问答助手](src/hotel-assistant/README.md) 体验「AI 先答、答不了转人工、管理端可改」的完整闭环。
 
 ## 许可证
 
